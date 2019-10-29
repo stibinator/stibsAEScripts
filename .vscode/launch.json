@@ -7,9 +7,9 @@
         {
             "type": "extendscript-debug",
             "request": "launch",
-            "name": "cmdtest",
-            "program": "${workspaceFolder}/cmdtest.jsx",
-            "cwd": "/C/Users/sdixon/AppData/Roaming/Adobe/After Effects/16.1/Scripts/"
+            "name": "current file",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}",
             "stopOnEntry": false
         },
         {
@@ -18,15 +18,6 @@
             "name": "Ask for script name",
             "program": "${workspaceFolder}/${command:AskForScriptName}",
             "stopOnEntry": false
-        },
-        {
-            "type": "extendscript-debug",
-            "request": "launch",
-            "name": "get-font",
-            "program": "${workspaceFolder}/get-font.jsx",
-            "stopOnEntry": false
         }
-
-
     ]
 }
