@@ -3,6 +3,8 @@
 // eslint-disable-next-line
 // @include  getproperties.jsx
 
+/* global app, Panel, getPropertiesWithExpressionsFromLayer */
+
 //set the message that gets appended to expressons to denote that they're paused
 //the message will be made into a comment, so it won't affect the expression
 var pausedTag = "#paused#"; //you can change this if you want, 
@@ -11,13 +13,15 @@ var pauseAllText = "Pause";
 var resumePausedText = "Resume paused Xps";
 var startAllText = "Start disabled Xps";
 var removeAllText = "Remove Xps";
-var freezeText = "Freeze XPs at current value";
+var freezeText = "Freeze Xps at current value";
 var selectedOnlyLabel = '..on selected layers only';
 var selectedPropsOnlyLabel = '..on selected properties only';
 var includeLockedLabel = ' Include locked layers';
 var removeExpUndoGrpLabel = "remove all expressions";
 var freezeExpressionsUndoGrpLabel = "freeze all expressions";
 var startExpressionsUndoGrpLabel = "start all disabled expressions";
+var convertText = "Xps > Keyframes"
+var convertExpressionsUndoGrpLabel = "Convert all expressions to KFs"
 var noSelectedLayersText = "No layers selected, silly rabbit";
 
 //global vars
@@ -28,48 +32,52 @@ var scriptName = "Pause Expressions";
 
 function buildUI(thisObj) {
     if (thisObj instanceof Panel) {
-        pal = thisObj;
+        var pal = thisObj;
     } else {
         pal = new Window("palette", scriptName, undefined, {resizeable: true});
     }
     if (pal !== null) {
-        ExpressionsText = pal.add("statictext", [
-            undefined, undefined, 200, 22
-        ], "Expressions:");
-
-        pauseExpressionsBtn = pal.add("button", [
+        var xpPanel = pal.add('panel', undefined, "Expressions:");
+        xpPanel.orientation = 'column';
+        xpPanel.alignChildren = 'left';
+        xpPanel.size = {width: 180, height: undefined};
+        var pauseExpressionsBtn = xpPanel.add("button", [
             undefined, undefined, 200, 22
         ], pauseAllText);
 
-        startExpressionsBtn = pal.add("button", [
+        var startExpressionsBtn = xpPanel.add("button", [
             undefined, undefined, 200, 22
         ], startAllText);
 
-        removeExpressionsBtn = pal.add("button", [
+        var removeExpressionsBtn = xpPanel.add("button", [
             undefined, undefined, 200, 22
         ], removeAllText);
 
-        freezeExpressionsBtn = pal.add("button", [
+        var freezeExpressionsBtn = xpPanel.add("button", [
             undefined, undefined, 200, 22
         ], freezeText);
+
+        var convertAllExpressionsBtn = xpPanel.add("button", [
+            undefined, undefined, 200, 22
+        ], convertText);
         //
         // freezeKeyframeCheckbox = pal.add("checkbox", [
         //     undefined, undefined, 200, 22
         // ], 'Freeze creates keyframe');
 
-        selectedOnlyCheckbox = pal.add("checkbox", [
+        var selectedOnlyCheckbox = pal.add("checkbox", [
             undefined, undefined, 200, 22
         ], selectedOnlyLabel);
 
         selectedOnlyCheckbox.value = false;
         selectedOnlyCheckbox.oldValue = false;
-        selectedPropsOnlyCheckbox = pal.add("checkbox", [
+        var selectedPropsOnlyCheckbox = pal.add("checkbox", [
             undefined, undefined, 200, 22
         ], selectedPropsOnlyLabel);
 
         selectedPropsOnlyCheckbox.value = false;
         selectedPropsOnlyCheckbox.oldValue = false;
-        includeLockedCheckBox = pal.add("checkbox", [
+        var includeLockedCheckBox = pal.add("checkbox", [
             undefined, undefined, 200, 22
         ], includeLockedLabel);
 
@@ -174,6 +182,15 @@ function buildUI(thisObj) {
             app.endUndoGroup();
         };
 
+        convertAllExpressionsBtn.onClick = function() {
+            app.beginUndoGroup(convertExpressionsUndoGrpLabel);
+            var theLayers = getTheLayers(selectedOnlyCheckbox.value);
+            if (theLayers.length > 0) {
+                convertExpressions(theLayers, includeLockedCheckBox.value, selectedPropsOnlyCheckbox.value);
+            }
+            app.endUndoGroup();
+        };
+
     }
     if (pal instanceof Window) {
         pal.center();
@@ -197,7 +214,7 @@ function getTheLayers(selectedOnly) {
             alert(noSelectedLayersText);
         }
     } else {
-        for (i = 1; i <= app.project.activeItem.layers.length; i++) {
+        for (var i = 1; i <= app.project.activeItem.layers.length; i++) {
             theLayersList.push(app.project.activeItem.layers[i]);
         }
     }
@@ -209,7 +226,7 @@ function toggleExpressionsOnLayers(theLayers, includeLocked, onlySelectedProps) 
     // pause and resume active expressions
     if (pauseState) { // paused is true so we resume the expression
         // loop through all the properties with expressions
-        for (i = 0; i < expressionProps.length; i++) {
+        for (var i = 0; i < expressionProps.length; i++) {
             //tagLength is a negative number so this is like expression.substr(-5) or whatevs
             if (expressionProps[i].expression.substr(tagLength) === pausedTag) {
                 // slice off the "//#paused#" comment
@@ -268,9 +285,43 @@ function freezeExpressions(theLayers, includeLocked, onlySelectedProps) {
     }
 }
 
+function convertExpressions(theLayers, includeLocked, onlySelectedProps) {
+    for (var lyr = 0; lyr < theLayers.length; lyr++){
+        var expressionProps = getExpressions(theLayers[lyr], includeLocked, onlySelectedProps);
+        var startPt = (theLayers[lyr].inPoint > 0)? 
+            theLayers[lyr].inPoint: 
+            0.0;
+        var stopPt = (theLayers[lyr].outPoint < theLayers[lyr].containingComp.duration)? 
+            theLayers[lyr].outPoint: 
+            theLayers[lyr].containingComp.duration;
+        var frameDur = theLayers[lyr].containingComp.frameDuration;
+        var n = 0;
+        for (var i = 0; i < expressionProps.length; i++) {
+            var newKeys = [];
+            for (var curTime  = startPt; curTime  < stopPt; curTime += frameDur) {
+                //create keyframes from our expression - if the property already has KFs then we need to add a new keyframe
+                newKeys[n] = {keyTime: curTime, keyVal: expressionProps[i].valueAtTime(curTime, false)};
+                 n++;
+            }
+            
+                theLayers[lyr].comment = theLayers[lyr].comment + "keyframeInfo:" + expressionProps[i].name
+            for (var keyNum = 1; keyNum <= expressionProps[i].numKeys; keyNum++){
+                theLayers[lyr].comment = theLayers[lyr].comment + "key#" + i + "@" + expressionProps[i].keyTime(i) + "=" + expressionProps[i].keyValue(i) + "\n"
+            }
+
+            expressionProps[i].expressionEnabled = false;
+            while(n > 0 ) {
+                n--;
+                //create keyframes from our expression - if the property already has KFs then we need to add a new keyframe
+                expressionProps[i].setValueAtTime(newKeys[n].keyTime, newKeys[n].keyVal)
+            }
+        }
+    }
+}
+
+
 function getExpressions(theLayers, includeLocked, onlySelectedProps) {
     var theProps = [];
-    var theExpressions = [];
     var newProps;
     for (var i = 0; i < theLayers.length; i++) {
         //check to see if the layer is locked if neccessary
