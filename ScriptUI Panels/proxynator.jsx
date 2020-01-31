@@ -1,56 +1,53 @@
+/* eslint-disable no-undef */
 // global constants
 var scriptName = "proxinator";
 var prefsFile = Folder.userData.absoluteURI + "/AE_proxinator.prefs";
 
 function proxinate(proxyFolder, items) {
   // set a proxy for all selected items by matching file names in a folder
-  originals = items || app.project.selection;
+  var originals = items || app.project.selection;
   var msg = "";
   if (originals) {
-    var f,
-    proxyPath;
     for (var i = 0; i < originals.length; i++) {
       if (!proxyFolder) {
         chooseProxyFolder()
       }
-      try {
+      // try {
+        var originalBaseName = originals[i].name;
         if (originals[i].typeName === "Footage") {
-          newProxy = new File(proxyFolder.absoluteURI + "/" + originals[i].file.name);
-          originals[i].setProxy(newProxy);
-        } else {
-          // possible matches for the proxy, from the reasonable to the silly
-          var suffixes = [
-            ".mov",
-            ".avi",
-            ".mp4",
-            ".mxf",
-            ".mpg",
-            ".mpeg",
-            ".mkv",
-            ".ogv",
-            ".webm",
-            ".wmv",
-            ".dv",
-            ".omf"
-          ];
-          var attempt = 0;
-          for (var s = 0; s < suffixes.length; s++) {
-            newProxy = new File(proxyFolder.absoluteURI + "/" + originals[i].name + suffixes[s]);
-            if (newProxy.exists) {
-              break
-            }
-          }
+          originalBaseName = originals[i].name.replace(/\..+$/, ''); //trim extension
+        }
+        // possible matches for the proxy, from the reasonable to the silly
+        var suffixes = [
+          ".mov",
+          ".avi",
+          ".mp4",
+          ".mxf",
+          ".mpg",
+          ".mpeg",
+          ".mkv",
+          ".ogv",
+          ".webm",
+          ".wmv",
+          ".dv",
+          ".omf"
+        ];
+        var foundAProxy = false;
+        for (var s = 0; s < suffixes.length & !foundAProxy; s++) {
+          newProxy = new File(proxyFolder.absoluteURI + "/" + originalBaseName + suffixes[s]);
           if (newProxy.exists) {
             originals[i].setProxy(newProxy);
-          } else {
-            msg += originals[i].name + "\n";
+            foundAProxy = true;
+          } 
+          if (!foundAProxy){
+            msg += originalBaseName + "\n";
           }
         }
         originals[i].selected = false;
         originals[i].selected = true;
-      } catch (e) {
-        alert("had an error" + e)
-      }
+      // } catch (e) {
+      //   alert("had an error" + e)
+      // }
     }
     if (msg) {
       alert("Can't find matching files in\n" + proxyFolder.fsName + "\nfor item:\n" + msg);
@@ -144,7 +141,37 @@ function buildUI(thisObj) {
       height: 25
     }, "choose a folder", {truncate: "middle"});
 
-    function checkProxyFolderAndUpdateText() {
+
+    checkProxyFolderAndUpdateText(proxyFolder, proxyFolderText, proxinateBtn, statusText);
+
+    chooseProxyFolderBtn.onClick = function() {
+      proxyFolder = chooseProxyFolder(proxyFolder);
+      checkProxyFolderAndUpdateText();
+    };
+
+    proxinateBtn.onClick = function() {
+      if (proxinate(proxyFolder)){
+        statusText.text = "succesfully proxinated"
+      } else {
+        statusText.text = "error while proxinating"
+      }
+      this.active = false; // stops the button staying activated
+    };
+
+    if (!proxyFolder) {
+      proxinateBtn.enabled = false
+    }
+    // show the panel
+    if (pal instanceof Window) {
+      pal.center();
+      pal.show();
+    } else {
+      pal.layout.layout(true);
+    }
+  }
+}
+
+    function checkProxyFolderAndUpdateText(proxyFolder, proxyFolderText, proxinateBtn, statusText) {
 
       if ( proxyFolder && proxyFolder.fsName) {
         proxyFolderText.text = proxyFolder.fsName;
@@ -160,34 +187,7 @@ function buildUI(thisObj) {
         statusText.text = "choose a proxy source folder";
       }
     }
-    checkProxyFolderAndUpdateText();
 
-    chooseProxyFolderBtn.onClick = function() {
-      proxyFolder = chooseProxyFolder(proxyFolder);
-      checkProxyFolderAndUpdateText();
-    };
-
-    proxinateBtn.onClick = function() {
-      if (proxinate(proxyFolder)){
-        statusText.text = "succesfully proxinated"
-      } else {
-        statusText.text = "error while proxinating"
-      };
-      this.active = false; // stops the button staying activated
-    };
-
-    if (!proxyFolder) {
-      proxinateBtn.enabled = false
-    };
-    // show the panel
-    if (pal instanceof Window) {
-      pal.center();
-      pal.show();
-    } else {
-      pal.layout.layout(true);
-    }
-  }
-}
 // var proxyFolder = chooseProxyFolder(lastFolder);
 // writePrefs(proxyFolder);
 // proxinate(proxyFolder);
