@@ -1,11 +1,12 @@
-﻿// first-n-last a handy comp trimmer that can trim to layers that extend before
+﻿/* global app, Panel, writeLn */
+// first-n-last a handy comp trimmer that can trim to layers that extend before
 // or after the comp's start and finish you can also trim to selected layers.
 
 function getLayers(theComp, useSelected) {
 
   if (useSelected) {
     if (theComp.selectedLayers.length > 0) {
-      theLayers = theComp.selectedLayers; //selectedLayers is indexed from 0...
+      var theLayers = theComp.selectedLayers; //selectedLayers is indexed from 0...
     } else {
       alert('you need to select some layers to trim to the selection');
       return false;
@@ -19,11 +20,11 @@ function getLayers(theComp, useSelected) {
   return theLayers;
 }
 function trimToLastLayer(theComp, useSelected, toSource, extendLayers, recurse, doLocked) {
-  var oldDuration = theComp.duration;
   var theLayers = getLayers(theComp, useSelected);
   if (theLayers) {
     var lastOut = 0;
     if (theLayers.length > 0) {
+      var isFootageLayer;
       for (var i = 0; i < theLayers.length; i++) {
         // find out if it is a moving source layer, in case we want to trim from the
         // source.
@@ -34,6 +35,7 @@ function trimToLastLayer(theComp, useSelected, toSource, extendLayers, recurse, 
         }
         // if we want to trim from the source we use the source files duration obviously
         // that makes no sense if time remapping is on
+        var layerOut;
         if (toSource && isFootageLayer && theLayers[i].timeRemapEnabled === false) {
           layerOut = theLayers[i].startTime + theLayers[i].source.duration;
         } else {
@@ -53,20 +55,22 @@ function trimToLastLayer(theComp, useSelected, toSource, extendLayers, recurse, 
 function trimToFirstLayer(theComp, useSelected, toSource, extendLayers, recurse, doLocked) {
 
   var theLayers = getLayers(theComp, useSelected);
-  var layerWasLocked = false;
-  if (theLayers) {
-    firstIn = theComp.duration;
+   if (theLayers) {
+    var firstIn = theComp.duration;
     if (theLayers.length > 0) {
       for (var i = 0; i < theLayers.length; i++) {
         // find out if it is a moving source layer, in case we want to trim from the
         // source
         var theLayer = theLayers[i];
+        var isFootageLayer;
+
         if (theLayer.source) {
           //has a file, but is it moving?
           isFootageLayer = theLayer.source.duration !== 0;
         } else {
           isFootageLayer = false;
         }
+        var layerIn;
         if (toSource && isFootageLayer && (theLayer.timeRemapEnabled === false)) {
           //trim to the source's start time in the comp
           layerIn = theLayer.startTime;
@@ -91,10 +95,7 @@ function trimToFirstAndLastLayers(theComp, useSelected, toSource, extendLayers, 
 }
 
 function trimToTime(theTime, theComp, first, extendLayers, recurse, doLocked) {
-  var n;
   var oldDuration;
-  var theLayer;
-  var layerWasLocked = false;
   if (first) {
     extendHeads(theComp, theTime, recurse, doLocked);
 
@@ -109,13 +110,14 @@ function trimToTime(theTime, theComp, first, extendLayers, recurse, doLocked) {
     }
   }
 }
+
 function extendHeads(theComp, newStartTime, extendLayers, recurse, doLocked){
   for (var n = 1; n <= theComp.layers.length; n++) {
     var theLayer = theComp.layer(n);
     var layerWasLocked = theLayer.locked;
     theLayer.locked = false;
     //find where the layer started
-    oldInPoint = theLayer.inPoint;
+    var oldInPoint = theLayer.inPoint;
     //offset it by the negative of the amount we're lengthening/shortening the comp
     theLayer.startTime = theLayer.startTime - newStartTime;
     // recurse into nested comps
@@ -165,6 +167,7 @@ function buildUI(thisObj) {
   var imgFolder = 'first-n-last/'; //for production
   // var imgFolder = 'C:/Users/sdixon/AppData/Roaming/Adobe/After Effects/16.0/Scripts/ScriptUI Panels/first-n-last/'; //for debug
   var scriptName = "first n last";
+  var pal;
   if (thisObj instanceof Panel) {
     pal = thisObj;
   } else {
