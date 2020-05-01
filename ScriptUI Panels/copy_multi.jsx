@@ -1,14 +1,14 @@
 //@target aftereffects
 /* jshint ignore:start */
 // Code here will be ignored by JSHint.
-// @includepath "../(lib)"
-// @include "defaultFor.jsx"
-// @include "timeconversions.jsx"
-// @include "spacetransforms.jsx"
-// @include "vectormaths.jsx"
-// @include "getproperties.jsx"
-// @include "copyproperties-makekey.jsx"
-// @include "preferences.jsx"
+/// @includepath "../(lib)"
+/// @include "defaultFor.jsx"
+/// @include "timeconversions.jsx"
+/// @include "spacetransforms.jsx"
+/// @include "vectormaths.jsx"
+/// @include "getproperties.jsx"
+/// @include "copyproperties-makekey.jsx"
+/// @include "preferences.jsx"
 // @script "copyMultiLayer"
 /* jshint ignore:end */
 

@@ -1,8 +1,11 @@
+/* global app */
 //add a handle to all unparented layers
 //@target aftereffects
 function addHandleNull(theLayer, theHandle) {
-    if (!theLayer.parent) {
-        theLayer.parent = theHandle;
+    if (theLayer){
+        if (! theLayer.parent) {
+            theLayer.parent = theHandle;
+        }
     }
 }
 
@@ -16,15 +19,19 @@ function addCompHandle() {
 
         var comp = app.project.activeItem;
         if (comp) {
-            //use selected layers if some layers are selected, use all if not
-            var theLayers = comp.selectedLayers;
-            if (theLayers.length === 0) {
-                theLayers = comp.layers;
-            }
             //make a separate array containing all the layers
             //to avoid weirdness when we add a null
-            for (var i = 1; i <= theLayers.length; i++) {
-                existingLayers.push(theLayers[i]);
+            var theLayers = comp.selectedLayers;
+            if (theLayers.length > 0) {
+            //use selected layers if some layers are selected,
+                for (var i = 0; i < theLayers.length; i++) {
+                    existingLayers.push(theLayers[i]);
+                }
+            } else {
+                // use all if not
+                for (var i = 1; i <= comp.layers.length; i++) {
+                    existingLayers.push(comp.layers[i]);
+                }
             }
             //here comes the hoo-ha:
             app.beginUndoGroup(scriptName);
@@ -32,7 +39,7 @@ function addCompHandle() {
             var theHandle = comp.layers.addNull();
             theHandle.name = "comp handle";
             //loop through and parent the layers to the handle
-            for (i = 0; i < existingLayers.length; i++) {
+            for (var i = 0; i < existingLayers.length; i++) {
                 if ((unlockedOnly && (!existingLayers[i].locked)) | (!unlockedOnly)) {
                     addHandleNull(existingLayers[i], theHandle);
                 }

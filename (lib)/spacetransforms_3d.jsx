@@ -1,8 +1,8 @@
 ﻿//@target aftereffects
 /* jshint ignore:start */
-// @includepath  "lib"
-﻿// @include defaultFor.jsx
-// @include vectormaths.jsx
+/// @includepath  "lib"
+﻿/// @include defaultFor.jsx
+/// @include vectormaths.jsx
 /* jshint ignore:end */
 
 function toWorldPos(fromLayer, fromPoint, t, posNull) {

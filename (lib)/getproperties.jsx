@@ -1,8 +1,9 @@
+// eslint-disable-next-line no-unused-vars
 function getIndividualProperties(theProps) {
     var props = [];
     for (var p = 0; p <= theProps.length; p++) {
         if (theProps[p]) {
-            propertyGroup = theProps[p];
+            var propertyGroup = theProps[p];
             var newProps = traversePropertyGroups(propertyGroup);
             if (newProps.length) {
                 for (var i = 0; i < newProps.length; i++) {
@@ -35,6 +36,7 @@ function traversePropertyGroups(pGroup) {
     }
 }
 
+// eslint-disable-next-line no-unused-vars
 function getPropertiesFromLayer(theLayer, selectedOnly) {
     var props = [];
     //only return selected properties. Kinda trivial but here for ease of use
@@ -46,7 +48,7 @@ function getPropertiesFromLayer(theLayer, selectedOnly) {
       //walk the whole property tree
         for (var p = 1; p <= theLayer.numProperties; p++) {
             if (theLayer.property(p)) {
-                propertyGroup = theLayer.property(p);
+                var propertyGroup = theLayer.property(p);
                 var newProps = traversePropertyGroups(propertyGroup);
                 if (newProps.length) {
                     for (var i = 0; i < newProps.length; i++) {
@@ -59,6 +61,7 @@ function getPropertiesFromLayer(theLayer, selectedOnly) {
     return props;
 }
 
+// eslint-disable-next-line no-unused-vars
 function getPropertiesWithExpressionsFromLayer(theLayer, selectedOnly) {
     var props = [];
     //only return selected properties. Kinda trivial but here for ease of use
@@ -71,7 +74,7 @@ function getPropertiesWithExpressionsFromLayer(theLayer, selectedOnly) {
     } else {
         for (var p = 1; p <= theLayer.numProperties; p++) {
             if (theLayer.property(p)) {
-                propertyGroup = theLayer.property(p);
+                var propertyGroup = theLayer.property(p);
                 var newProps = traversePropertyGroups(propertyGroup);
                 if (newProps.length) {
                     for (var i = 0; i < newProps.length; i++) {
@@ -86,6 +89,7 @@ function getPropertiesWithExpressionsFromLayer(theLayer, selectedOnly) {
     return props;
 }
 
+// eslint-disable-next-line no-unused-vars
 function getPropertiesWithKeyFramesFromLayer(theLayer, selectedOnly) {
     var props = [];
     //only return selected properties. Kinda trivial but here for ease of use
@@ -98,7 +102,7 @@ function getPropertiesWithKeyFramesFromLayer(theLayer, selectedOnly) {
     } else {
         for (var p = 1; p <= theLayer.numProperties; p++) {
             if (theLayer.property(p)) {
-                propertyGroup = theLayer.property(p);
+                var propertyGroup = theLayer.property(p);
                 var newProps = traversePropertyGroups(propertyGroup);
                 if (newProps.length) {
                     for (var i = 0; i < newProps.length; i++) {

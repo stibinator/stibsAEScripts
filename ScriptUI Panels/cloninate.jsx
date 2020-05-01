@@ -1,8 +1,8 @@
 ﻿// @target aftereffects
 //the cloninator clones an item in a comp and creates a
 // new source for it in the project (c)2016 Stephen Dixon
-// @includepath "../(lib)"
-// @include "duplicate layer source.jsx"
+/// @includepath "../(lib)"
+/// @include "duplicate layer source.jsx"
 
 
 var scriptName = 'cloninateLayer';

@@ -1,6 +1,6 @@
 ﻿// @target aftereffects
-// @includepath  "../(lib)"
-// @include getproperties.jsx
+/// @includepath  "../(lib)"
+/// @include getproperties.jsx
 
 
 //set the message that gets appended to expressons to denote that they're paused

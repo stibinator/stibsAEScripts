@@ -3,7 +3,7 @@
 // or after the comp's start and finish you can also trim to selected layers.
 
 function getLayers(theComp, useSelected) {
-
+if (theComp && theComp.layers){
   if (useSelected) {
     if (theComp.selectedLayers.length > 0) {
       var theLayers = theComp.selectedLayers; //selectedLayers is indexed from 0...
@@ -18,7 +18,11 @@ function getLayers(theComp, useSelected) {
     }
   }
   return theLayers;
+} else {
+          alert('you need to use this in a composition window');
+    }
 }
+
 function trimToLastLayer(theComp, useSelected, toSource, extendLayers, recurse, doLocked) {
   var theLayers = getLayers(theComp, useSelected);
   if (theLayers) {
@@ -121,7 +125,7 @@ function extendHeads(theComp, newStartTime, extendLayers, recurse, doLocked){
     //offset it by the negative of the amount we're lengthening/shortening the comp
     theLayer.startTime = theLayer.startTime - newStartTime;
     // recurse into nested comps
-    if ((theLayer.source.typeName === 'Composition') && recurse) {
+    if ((theLayer.source) && (theLayer.source.typeName === 'Composition') && recurse) {
       trimToTime(newStartTime, theLayer.source, true, true, recurse, doLocked);
     }
     // extend any layers that started at 0
@@ -145,7 +149,7 @@ function extendTails(theComp, oldDuration, newDuration, doLocked, recurse) {
       // if the layer currently ends at or after the end of the comp extend it
       if (theLayer.outPoint >= oldDuration) {
         //   // recurse into nested comps
-        if ((theLayer.source.typeName === 'Composition') && recurse) {
+        if (theLayer.source && ((theLayer.source.typeName === 'Composition') && recurse)) {
           //     // make sure the nested comps time is synched
           //alert("recursing");
           theLayer.source.time = newDuration - theLayer.startTime;
@@ -217,7 +221,14 @@ function buildUI(thisObj) {
     var row3 = pal.add("group{orientation:'row', alignment: ['fill','top'], alignChildren: ['fill','top'" +
     ']}');
 
-    var trimStartToCurrent = row3.add('iconbutton', {
+ var addToStart = row3.add('iconbutton', {
+      x: undefined,
+      y: undefined,
+      width: 40,
+      height: 32
+    }, new File(imgFolder + 'addStart.png'));
+
+    var trimStartToCurrent = row3.add('iconbutton', { 
       x: undefined,
       y: undefined,
       width: 40,
@@ -230,6 +241,13 @@ function buildUI(thisObj) {
       width: 40,
       height: 32
     }, new File(imgFolder + 'endCurrent.png'));
+
+ var addToEnd = row3.add('iconbutton', {
+      x: undefined,
+      y: undefined,
+      width: 40,
+      height: 32
+    }, new File(imgFolder + 'addEnd.png'));
 
     var row4 = pal.add("group{orientation:'column', alignment: ['left','top'], alignChildren: ['left','t" +
     "op']}");
@@ -261,21 +279,44 @@ function buildUI(thisObj) {
     //        useSelected.onclick = function () {useSelected.value =  !
     // useSelected.value};
     trimFirst.onClick = function () {
+      app.beginUndoGroup("Trim to first layer");
       trimToFirstLayer(app.project.activeItem, useSelected.value, toSource.value, extendLayersChkBx.value, recuseChkBx.value, doLockedchkBx.value);
+      app.endUndoGroup();
     };
     trimFirstnLast.onClick = function () {
+      app.beginUndoGroup("Trim to first layer");
       trimToFirstAndLastLayers(app.project.activeItem, useSelected.value, toSource.value, extendLayersChkBx.value, recuseChkBx.value, doLockedchkBx.value);
+      app.endUndoGroup();
     };
     trimLast.onClick = function () {
+      app.beginUndoGroup("Trim to first layer");
       trimToLastLayer(app.project.activeItem, useSelected.value, toSource.value, extendLayersChkBx.value, recuseChkBx.value, doLockedchkBx.value);
+      app.endUndoGroup();
     };
     trimStartToCurrent.onClick = function () {
+      app.beginUndoGroup("Trim to first layer");
       var theComp = app.project.activeItem;
       trimToTime(theComp.time, theComp, true, extendLayersChkBx.value, recuseChkBx.value, doLockedchkBx.value);
+      app.endUndoGroup();
     };
     trimEndToCurrent.onClick = function () {
+      app.beginUndoGroup("Trim to first layer");
       var theComp = app.project.activeItem;
       trimToTime(theComp.time + theComp.frameDuration, theComp, false, extendLayersChkBx.value, recuseChkBx.value, doLockedchkBx.value);
+      app.endUndoGroup();
+    };
+    addToStart.onClick = function () {
+      app.beginUndoGroup("Trim to first layer");
+      var theComp = app.project.activeItem;
+      trimToTime(0 - 5, theComp, true, extendLayersChkBx.value, recuseChkBx.value, doLockedchkBx.value);
+      app.endUndoGroup();
+    };
+    
+    addToEnd.onClick = function () {
+      app.beginUndoGroup("Trim to first layer");
+      var theComp = app.project.activeItem;
+      trimToTime(theComp.duration + 5, theComp, false, extendLayersChkBx.value, recuseChkBx.value, doLockedchkBx.value);
+      app.endUndoGroup();
     };
   }
   if (pal instanceof Window) {

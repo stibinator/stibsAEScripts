@@ -1,7 +1,7 @@
 //@target aftereffects
-// @includepath "../(lib)"
-// @include "defaultFor.jsx"
-// @include "getproperties.jsx"
+/// @includepath "../(lib)"
+/// @include "defaultFor.jsx"
+/// @include "getproperties.jsx"
 // @script "copySelectedKeys"
 
 /* jshint ignore:end */

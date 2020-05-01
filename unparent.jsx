@@ -1,8 +1,8 @@
 ﻿/* jshint ignore:start */
 // Code here will be ignored by JSHint.
-// @includepath "./(lib)"
-// @include "spacetransforms.jsx"
-// @include "vectormaths.jsx"
+/// @includepath "./(lib)"
+/// @include "spacetransforms.jsx"
+/// @include "vectormaths.jsx"
 /* jshint ignore:end */
 recurseParents = false; //true;
 bakeAllMotion = false;
