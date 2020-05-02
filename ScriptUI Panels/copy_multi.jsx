@@ -1,16 +1,15 @@
 //@target aftereffects
-/* jshint ignore:start */
 // Code here will be ignored by JSHint.
-/// @includepath "../(lib)"
-/// @include "defaultFor.jsx"
-/// @include "timeconversions.jsx"
-/// @include "spacetransforms.jsx"
-/// @include "vectormaths.jsx"
-/// @include "getproperties.jsx"
-/// @include "copyproperties-makekey.jsx"
-/// @include "preferences.jsx"
+/* includepath "../(lib)" */
+/* include "defaultFor.jsx" */
+/* include "timeconversions.jsx" */
+/* include "spacetransforms.jsx" */
+/* include "vectormaths.jsx" */
+/* include "getproperties.jsx" */
+/* include "copyproperties-makekey.jsx" */
+/* include "preferences.jsx" */
 // @script "copyMultiLayer"
-/* jshint ignore:end */
+/* global app, Panel, ScriptUI, CompItem, writeln, makeKeyWithAttributes, makeKeyAtTime, setKeyAttributesReversed, copyKeyAttributes, defaultFor, getIndividualProperties */
 
 var thisScript = this;
 thisScript.scriptTitle = "copyMultiLayer";
@@ -176,7 +175,6 @@ thisScript.buildGUI = function(thisObj) {
     };
 
     beforeAfterToggle.onClick = function() {
-        var theComp = app.project.activeItem;
         if (beforeAfterToggle.value) {
             beforeAfterToggle.image = beforePH;
         } else {
@@ -212,9 +210,8 @@ thisScript.pasteKeys = function(theCopiedKeys, beforePlayHead, theComp) {
     if (theCopiedKeys !== null) {
         for (var i = 0; i < theCopiedKeys.keys.length; i++) {
             var theKey = theCopiedKeys.keys[i];
-            if (beforePlayHead === true) {
-                offsetTime = theKey.attributes.keyTime - theCopiedKeys.lastSelectedKeyTime;
-            } else {
+            var offsetTime = theKey.attributes.keyTime - theCopiedKeys.lastSelectedKeyTime;
+            if (beforePlayHead !== true) {
                 offsetTime = theKey.attributes.keyTime - theCopiedKeys.firstSelectedKeyTime;
             }
             makeKeyWithAttributes(theKey.prop, theKey.attributes, theComp.time + offsetTime);
@@ -228,7 +225,7 @@ thisScript.pasteKeysReverse = function(theCopiedKeys, beforePlayHead, theComp) {
         for (var i = 0; i < theCopiedKeys.keys.length; i++) {
             var theKey = theCopiedKeys.keys[i];
             if (beforePlayHead === true) {
-                offsetTime = theKey.attributes.keyTime - theCopiedKeys.firstSelectedKeyTime;
+                var offsetTime = theKey.attributes.keyTime - theCopiedKeys.firstSelectedKeyTime;
                 makeKeyAtTime(theKey.prop, theKey.attributes, theComp.time - offsetTime);
             } else {
                 offsetTime = theCopiedKeys.lastSelectedKeyTime - theKey.attributes.keyTime;
@@ -261,7 +258,7 @@ thisScript.copySelectedKeys = function(theComp) {
     for (var i = 0; i < selLayers.length; i++) {
         var selectedProps = selLayers[i].selectedProperties;
         for (var j = 0; j < selectedProps.length; j++) {
-            selectedKeyframes = selectedProps[j].selectedKeys;
+            var selectedKeyframes = selectedProps[j].selectedKeys;
             if (selectedKeyframes) {
                 for (var k = 0; k < selectedKeyframes.length; k++) {
                     //get the attributes of the selected key - note that the key list is 1-indexed WTF adobe?
@@ -284,11 +281,11 @@ thisScript.copySelectedKeys = function(theComp) {
 thisScript.copyTimeSlice = function(theComp) {
     var theProps = [];
     var theVals = [];
-    theComp = defaultFor(theComp, app.project.activeItem, replaceNullAndZeroVals = true);
+    theComp = defaultFor(theComp, app.project.activeItem, true);
     var selLayers = theComp.selectedLayers;
     for (var layer = 0; layer < selLayers.length; layer++) {
         var theLayer = selLayers[layer];
-        selProps = getIndividualProperties(theLayer.selectedProperties);
+        var selProps = getIndividualProperties(theLayer.selectedProperties);
         for (var p = 0; p < selProps.length; p++) {
             theProps.push(selProps[p]);
         }
@@ -301,7 +298,7 @@ thisScript.copyTimeSlice = function(theComp) {
 
 thisScript.pasteTimeSlice = function(theVals, theComp) {
     app.beginUndoGroup("paste Time Slice");
-    thisScript.theComp = defaultFor(theComp, app.project.activeItem, replaceNullAndZeroVals = true);
+    thisScript.theComp = defaultFor(theComp, app.project.activeItem, true);
     for (var i = 0; i < theVals.length; i++) {
         theVals[i].prop.setValueAtTime(theComp.time, theVals[i].val);
     }

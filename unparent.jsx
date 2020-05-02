@@ -1,11 +1,13 @@
 ﻿/* jshint ignore:start */
 // Code here will be ignored by JSHint.
-/// @includepath "./(lib)"
-/// @include "spacetransforms.jsx"
-/// @include "vectormaths.jsx"
+/* includepath "./(lib)" */
+/* include "spacetransforms.jsx" */
+/* include "vectormaths.jsx" */
 /* jshint ignore:end */
-recurseParents = false; //true;
-bakeAllMotion = false;
+/* global app, makeTempNull, removeTempNull, toWorldPos, toWorldRotation, toWorldScale*/
+
+var recurseParents = false; //true;
+var bakeAllMotion = false;
 app.beginUndoGroup("unparent");
 var theComp = app.project.activeItem;
 var theLayers = theComp.selectedLayers;
@@ -29,32 +31,34 @@ for (var i = 0; i < theLayers.length; i++) {
         var currRot = toWorldRotation(currLayer, currTime);
         var currScale = toWorldScale(currLayer, currTime);
         //there may be a grandparent
-        theGrandParent = theParent.parent;
+        var theGrandParent = theParent.parent;
         //get the world transforms of the layer at each keyframe
         var nearestFrameToIn = Math.floor(currLayer.inPoint / theComp.frameDuration) * theComp.frameDuration;
+        var t, k, worldPos, worldRot, worldScale;
+
         if (bakeAllMotion) {
-            for (var t = nearestFrameToIn; t <= currLayer.outPoint; t += theComp.frameDuration) {
-                var worldPos = toWorldPos(currLayer, currLayer.transform.anchorPoint.valueAtTime(t, true), t, posNull);
+            for (t = nearestFrameToIn; t <= currLayer.outPoint; t += theComp.frameDuration) {
+                worldPos = toWorldPos(currLayer, currLayer.transform.anchorPoint.valueAtTime(t, true), t, posNull);
                 posKeys.push(worldPos);
-                var worldRot = toWorldRotation(currLayer, t);
+                worldRot = toWorldRotation(currLayer, t);
                 rotKeys.push(worldRot);
-                var worldScale = toWorldScale(currLayer, t);
+                worldScale = toWorldScale(currLayer, t);
                 scaleKeys.push(worldScale);
             }
         } else {
-            for (var k = 1; k <= pos.numKeys; k++) {
-                var t = pos.keyTime(k);
-                var worldPos = toWorldPos(currLayer, currLayer.transform.anchorPoint.valueAtTime(t, true), t, posNull);
+            for (k = 1; k <= pos.numKeys; k++) {
+                t = pos.keyTime(k);
+                worldPos = toWorldPos(currLayer, currLayer.transform.anchorPoint.valueAtTime(t, true), t, posNull);
                 posKeys.push(worldPos);
             }
-            for (var k = 1; k <= rot.numKeys; k++) {
-                var t = rot.keyTime(k);
-                var worldRot = toWorldRotation(currLayer, t);
+            for (k = 1; k <= rot.numKeys; k++) {
+                t = rot.keyTime(k);
+                worldRot = toWorldRotation(currLayer, t);
                 rotKeys.push(worldRot);
             }
-            for (var k = 1; k <= scale.numKeys; k++) {
-                var t = scale.keyTime(k);
-                var worldScale = toWorldScale(currLayer, t);
+            for (k = 1; k <= scale.numKeys; k++) {
+                t = scale.keyTime(k);
+                worldScale = toWorldScale(currLayer, t);
                 scaleKeys.push(worldScale);
             }
         }
@@ -65,9 +69,9 @@ for (var i = 0; i < theLayers.length; i++) {
             : null;
         //now set the transforms for the new setup
         //pos
-        for (var k = 0; k < posKeys.length; k++) {
+        for (k = 0; k < posKeys.length; k++) {
             //k+1 to deal with adobe's weird 1-based indexing
-            var t = pos.keyTime(k + 1);
+            t = pos.keyTime(k + 1);
             pos.setValueAtTime(t, posKeys[k]);
         }
         //make an additional keyframe if the playhead isn't currently on a keyframe
@@ -78,8 +82,8 @@ for (var i = 0; i < theLayers.length; i++) {
             pos.setValue(currPos);
         }
         //rot
-        for (var k = 0; k < rotKeys.length; k++) {
-            var t = rot.keyTime(k + 1);
+        for (k = 0; k < rotKeys.length; k++) {
+            t = rot.keyTime(k + 1);
             rot.setValueAtTime(t, rotKeys[k]);
         }
         //make an additional keyframe if the playhead isn't currently on a keyframe
@@ -90,8 +94,8 @@ for (var i = 0; i < theLayers.length; i++) {
             rot.setValue(currRot);
         }
         //scale
-        for (var k = 0; k < scaleKeys.length; k++) {
-            var t = scale.keyTime(k + 1);
+        for (k = 0; k < scaleKeys.length; k++) {
+            t = scale.keyTime(k + 1);
             scale.setValueAtTime(t, scaleKeys[k]);
         }
         //make an additional keyframe if the playhead isn't currently on a keyframe

@@ -1,7 +1,7 @@
-﻿// @target aftereffects
-/// @includepath  "../(lib)"
-/// @include getproperties.jsx
-
+﻿/* @target aftereffects */
+/* includepath  "../(lib)" */
+/* include getproperties.jsx */
+/* global app, Panel, getPropertiesWithExpressionsFromLayer */
 
 //set the message that gets appended to expressons to denote that they're paused
 //the message will be made into a comment, so it won't affect the expression
@@ -20,20 +20,19 @@ var pauseState = false; //start off assuming that we haven't paused yet
 var scriptName = "Pause Expressions";
 
 function buildUI(thisObj){
-    if (thisObj instanceof Panel){
-        pal = thisObj;
-    }else {
+    var pal = thisObj;
+    if (! (pal instanceof Panel)){
         pal= new Window("palette", scriptName, undefined, {resizeable:true});
     }
     if (pal !== null)
     {
-        ExpressionsText = pal.add("statictext", [undefined,undefined,200,22], "Expressions:");
-        pauseExpressionsBtn = pal.add("button", [undefined,undefined,200,22], pauseAllText);
-        startExpressionsBtn = pal.add("button", [undefined,undefined,200,22], startAllText);
-        removeExpressionsBtn = pal.add("button", [undefined,undefined,200,22], removeAllText);
-        selectedOnlyCheckbox = pal.add("checkbox", [undefined,undefined,200,22], ' …on selected layers only');
+        pal.add("statictext", [undefined,undefined,200,22], "Expressions:");
+        var pauseExpressionsBtn = pal.add("button", [undefined,undefined,200,22], pauseAllText);
+        var startExpressionsBtn = pal.add("button", [undefined,undefined,200,22], startAllText);
+        var removeExpressionsBtn = pal.add("button", [undefined,undefined,200,22], removeAllText);
+        var selectedOnlyCheckbox = pal.add("checkbox", [undefined,undefined,200,22], ' …on selected layers only');
         selectedOnlyCheckbox.value = false;
-        includeLockedCheckBox = pal.add("checkbox", [undefined,undefined,200,22], ' Include locked layers');
+        var includeLockedCheckBox = pal.add("checkbox", [undefined,undefined,200,22], ' Include locked layers');
         includeLockedCheckBox.value = false;
         includeLockedCheckBox.oldValue = false; // see below
         selectedOnlyCheckbox.onClick = function () {
@@ -104,7 +103,7 @@ function getTheLayers(selectedOnly){
             alert(noSelectedLayersText);
         }
     } else {
-        for (i=1; i<=app.project.activeItem.layers.length; i++){theLayersList.push(app.project.activeItem.layers[i]);}
+        for (var i=1; i<=app.project.activeItem.layers.length; i++){theLayersList.push(app.project.activeItem.layers[i]);}
     }
     return theLayersList;
 }
@@ -129,7 +128,7 @@ function toggleExpressions(expressionProps){
     // pause and resume active expressions
     if (pauseState){ // paused is true so we resume the expression
         // loop through all the properties with expressions
-        for (i=0; i< expressionProps.length; i++){
+        for (var i = 0; i < expressionProps.length; i++){
             //tagLength is a negative number so this is like expression.substr(-5) or whatevs
             if (expressionProps[i].expression.substr(tagLength) === pausedTag){
                 // slice off the "//#paused#" comment
@@ -139,7 +138,7 @@ function toggleExpressions(expressionProps){
             }
         }
     } else { // paused is false so pause the expression
-        for (i=0; i< expressionProps.length; i++){
+        for (i = 0; i < expressionProps.length; i++){
             //only pause expressions that are actually running, to avoid turning on disabled expressions later
             if (expressionProps[i].expressionEnabled === true){
                 //check to make sure we haven't paused it already
@@ -156,7 +155,7 @@ function toggleExpressions(expressionProps){
 
 function startExpressions(expressionProps){
     // start ALL inactive expressions, including paused ones
-    for (i=0; i< expressionProps.length; i++){
+    for (var i = 0; i < expressionProps.length; i++){
         if (expressionProps[i].expression.substr(tagLength) === pausedTag){
             // remove any tags the script may have previously added
             expressionProps[i].expression = expressionProps[i].expression.slice(0, tagLength);
@@ -166,15 +165,14 @@ function startExpressions(expressionProps){
 }
 
 function getExpressions(theLayers, includeLockedCheckBox){
-    var i;
     var theProps = [];
-    var theExpressions = [];
+    // var theExpressions = [];
     var newProps;
-    for (i=0; i< theLayers.length; i++){
+    for (var i = 0; i < theLayers.length; i++){
         //check to see if the layer is locked if neccessary
         if (theLayers[i].locked === false || includeLockedCheckBox){
             newProps = getPropertiesWithExpressionsFromLayer(theLayers[i]);
-            for (j=0; j<newProps.length; j++){theProps.push(newProps[j]);}
+            for (var j=0; j<newProps.length; j++){theProps.push(newProps[j]);}
         }
     }
     return theProps;
@@ -182,7 +180,7 @@ function getExpressions(theLayers, includeLockedCheckBox){
 
 function removeProps(expressionProps){
     // start ALL inactive expressions, including paused ones
-    for (i=0; i< expressionProps.length; i++){
+    for (var i = 0; i < expressionProps.length; i++){
         expressionProps[i].expression = "";
         expressionProps[i].expressionEnabled = false;
     }

@@ -1,9 +1,12 @@
-﻿// @target aftereffects
+﻿/* @target aftereffects */
 //the cloninator clones an item in a comp and creates a
 // new source for it in the project (c)2016 Stephen Dixon
-/// @includepath "../(lib)"
-/// @include "duplicate layer source.jsx"
 
+/* @includepath "../(lib)"
+ @include "duplicate layer source.jsx"
+ @include "incrementCompName.jsx" */
+
+/* global app, Panel, $, isValid, duplicateLayerSource, makeUniqueCompName */
 
 var scriptName = 'cloninateLayer';
 
@@ -14,30 +17,12 @@ function reinstateButton(theButton) { //reinstate a button with an oldValue prop
   }
 }
 
-function findDuplicateSourceItems(theName) {
-  var allItems = app.project.items;
-  var j;
-  for (j = 1; j <= allItems.length; j++) {
-    if (app.project.items[j].name === theName) {
-      return true;
-    }
-  }
 
-  return false;
-}
 function cloninateComp(originalComp, recursionLimit, recurseFootageToo, recursionDepth) {
   var newSource;
   var oldSource;
-  var otherLayers;
   var i;
   var nsLyr;
-  var re;
-  var m;
-  var oldSourceSerial;
-  var oldSourceBaseName;
-  var newSourceSerial;
-  var wasLocked;
-  var otherLayer;
 
   // recursionLimit < 0 means infinite. We start at recursion level = 0 so if the
   // user has limited it to 0 recursions only dupe the outer layer
@@ -66,42 +51,7 @@ function cloninateComp(originalComp, recursionLimit, recurseFootageToo, recursio
         }
       } 
 
-        // now rename the source with a unique name find a serialnumber suffix if one exists e.g. mypic.jpg_1 
-        // everyone stand back… 
-        // the RE matches any string that doesn't
-        // end in a number, followed by a number. eg foo99bar_9 will match
-        // (foo99bar_)(9)
-        re = /(.*[^\d])*(\d*)$/;
-
-        m = oldSource.name.match(re);
-        oldSourceSerial = m[2];
-        oldSourceBaseName = m[1];
-
-        //default serial number
-        newSourceSerial = 1;
-
-        // if no match, then the source doesn't have a serial number. One of these
-        // should catch it
-        if (typeof(oldSourceSerial) === 'undefined' || oldSourceSerial === '' || isNaN(parseInt(oldSourceSerial, 10))) {
-          // since there was no serial we add a separator onto the base name so that it
-          // becomes basename_1 etc
-          oldSourceBaseName = oldSource.name + '_';
-        } else {
-          //there was a serial number, so increment it
-          newSourceSerial = 1 + parseInt(oldSourceSerial, 10);
-        }
-
-        if (!oldSourceBaseName) {
-          oldSourceBaseName = oldSource.name;
-        } //shouldn't happen, but you know, regex..
-        // we need to check to see if a source layer with the new serial number exists,
-        // and if it does we keep incrementing the serial until it doesn't
-        while (findDuplicateSourceItems('' + oldSourceBaseName + newSourceSerial)) {
-          newSourceSerial++;
-        }
-
-        //set the name of the new source layer
-        newSource.name = '' + oldSourceBaseName + newSourceSerial;
+        newSource.name = makeUniqueCompName(oldSource);
       }
 
 function cloninateLayer(originalLayer, recursionLimit, recurseFootageToo, replaceOriginal, recursionDepth) {
@@ -110,11 +60,6 @@ function cloninateLayer(originalLayer, recursionLimit, recurseFootageToo, replac
   var otherLayers;
   var i;
   var nsLyr;
-  var re;
-  var m;
-  var oldSourceSerial;
-  var oldSourceBaseName;
-  var newSourceSerial;
   var wasLocked;
   var otherLayer;
 
@@ -129,7 +74,7 @@ function cloninateLayer(originalLayer, recursionLimit, recurseFootageToo, replac
       // we will duplicate them in this comp if the user wants to say, duplicate all
       // the layers selected
       if (recursionDepth === 0 && !replaceOriginal) {
-        newLayer = originalLayer.duplicate();
+        var newLayer = originalLayer.duplicate();
       }
     } else {
       if (oldSource.typeName === 'Composition') {
@@ -174,42 +119,8 @@ function cloninateLayer(originalLayer, recursionLimit, recurseFootageToo, replac
           newSource = duplicateLayerSource(originalLayer);
        }
 
-        // now rename the source with a unique name find a serialnumber suffix if one exists e.g. mypic.jpg_1 
-        // everyone stand back… 
-        // the RE matches any string that doesn't
-        // end in a number, followed by a number. eg foo99bar_9 will match
-        // (foo99bar_)(9)
-        re = /(.*[^\d])*(\d*)$/;
 
-        m = oldSource.name.match(re);
-        oldSourceSerial = m[2];
-        oldSourceBaseName = m[1];
-
-        //default serial number
-        newSourceSerial = 1;
-
-        // if no match, then the source doesn't have a serial number. One of these
-        // should catch it
-        if (typeof(oldSourceSerial) === 'undefined' || oldSourceSerial === '' || isNaN(parseInt(oldSourceSerial, 10))) {
-          // since there was no serial we add a separator onto the base name so that it
-          // becomes basename_1 etc
-          oldSourceBaseName = oldSource.name + '_';
-        } else {
-          //there was a serial number, so increment it
-          newSourceSerial = 1 + parseInt(oldSourceSerial, 10);
-        }
-
-        if (!oldSourceBaseName) {
-          oldSourceBaseName = oldSource.name;
-        } //shouldn't happen, but you know, regex..
-        // we need to check to see if a source layer with the new serial number exists,
-        // and if it does we keep incrementing the serial until it doesn't
-        while (findDuplicateSourceItems('' + oldSourceBaseName + newSourceSerial)) {
-          newSourceSerial++;
-        }
-
-        //set the name of the new source layer
-        newSource.name = '' + oldSourceBaseName + newSourceSerial;
+        newSource.name = makeUniqueCompName(oldSource);
       }
       //now back to the comp. Duplicate the layer
       newLayer = originalLayer.duplicate();
@@ -233,6 +144,7 @@ function cloninateLayer(originalLayer, recursionLimit, recurseFootageToo, replac
 
       //and set the source of that layer to the newly created project source item
       
+      // eslint-disable-next-line no-undef
       newLayer.replaceSource(newSource, fixExpressions = true);
       
       if (wasLocked) { //close the gate behind us
@@ -251,10 +163,9 @@ function buildUI(thisObj) {
   var recursionLimitTextBx;
   var footageTooChkbx;
   var btnGrp;
-  if (thisObj instanceof Panel) {
-    pal = thisObj;
-  } else {
-    pal = new Window('palette', scriptName, undefined, {resizeable: true});
+  var pal = thisObj;
+  if (! (pal instanceof Panel)) {
+      pal = new Window('palette', scriptName, undefined, {resizeable: true});
   }
 
   if (pal !== null) {
@@ -349,7 +260,7 @@ function buildUI(thisObj) {
      
 
       app.beginUndoGroup('cloninator');
-      originalIsCompInProjectWindow = (originalLayers.length === 0) ;
+      var originalIsCompInProjectWindow = (originalLayers.length === 0) ;
       if (originalIsCompInProjectWindow){
         cloninateComp(app.project.activeItem, recursionLimit, footageTooChkbx.value, 0 );
       } else {
@@ -373,7 +284,7 @@ function buildUI(thisObj) {
      
 
       app.beginUndoGroup('cloninator');
-      originalIsCompInProjectWindow = (originalLayers.length === 0) ;
+      var originalIsCompInProjectWindow = (originalLayers.length === 0) ;
       if (! originalIsCompInProjectWindow){
         for (i = 0; i < originalLayers.length; i++) {
           cloninateLayer(originalLayers[i], recursionLimit, footageTooChkbx.value, false, 0 );

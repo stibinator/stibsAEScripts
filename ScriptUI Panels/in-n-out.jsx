@@ -1,6 +1,7 @@
 ﻿// In-n-out by stib ©2016 Stephen Dixon sequences layers in a variety of ways
-// @target aftereffects
-/// @include ../(lib)/jsextras.jsx
+/* @target aftereffects */
+/* include ../(lib)/jsextras.jsx */
+/* global app, Panel, CompItem, timeToCurrentFormat, currentFormatToTime, writeln */
 
 var fnList = [
   'linear',
@@ -56,7 +57,7 @@ function sigmoid(x, p) {
   }
 
   if (p > 0) {
-    g = function (n) {
+    var g = function (n) {
       return (Math.pow(1 / n, p));
     };
     return g(1 - x) / (g(x) + g(1 - x));
@@ -156,8 +157,7 @@ function sequenceLayers(order, firstStartTime, endTime, ease, easePower, regular
       var timeSpan = endTime - firstStartTime;
       var startOffset;
       var outOffset; //the offset between the layer's start time and its in-point, and its active duration
-      compLength = theComp.duration;
-      numLayers = theLayers.length;
+      var numLayers = theLayers.length;
 
       // var theFammilies = makeFamilies(theLayers);
 
@@ -326,7 +326,7 @@ function buildGUI(thisObj) {
   firstHmsfText.onChange = function () {
     //parse the user input
     try {
-      parsedTime = currentFormatToTime(firstHmsfText.text, theComp.frameRate);
+      var parsedTime = currentFormatToTime(firstHmsfText.text, theComp.frameRate);
     } catch (e) {
       alert(e.name, e.message);
       parsedTime = 0;
@@ -367,7 +367,7 @@ function buildGUI(thisObj) {
   lastHmsfText.onChange = function () {
     //parse the user input
     try {
-      parsedTime = currentFormatToTime(lastHmsfText.text, theComp.frameRate);
+      var parsedTime = currentFormatToTime(lastHmsfText.text, theComp.frameRate);
       //propogate it to the slider
       lastSlider.value = parsedTime / theComp.duration * 100;
 
@@ -428,7 +428,7 @@ function buildGUI(thisObj) {
   fnTypeDropDown.onChange = function () {
     var i;
     var fn = 0;
-    fnsel = fnTypeDropDown.selection.text;
+    var fnsel = fnTypeDropDown.selection.text;
     for ( i = 0; i < fnList.length; i++) {
       if (fnList[i] === fnsel) {
         fn = i;

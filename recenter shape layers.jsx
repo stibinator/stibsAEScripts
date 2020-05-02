@@ -1,4 +1,4 @@
-// @target AfterEffects
+/* @target AfterEffects */
 // centers the anchor point of a shape layer in the middle of the contents of the layer
 app.beginUndoGroup("Center shape layer anchor");
 var theComp = app.project.activeItem;

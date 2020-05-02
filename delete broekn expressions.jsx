@@ -1,8 +1,8 @@
-// @target aftereffects
+/* @target aftereffects */
 // eslint-disable-next-line
-/// @includepath "./(lib)"
+/* includepath "./(lib)" */
 // eslint-disable-next-line
-/// @include  getproperties.jsx
+/* include  getproperties.jsx */
 /* global app, getPropertiesWithExpressionsFromLayer */
 
 var proj = app.project;

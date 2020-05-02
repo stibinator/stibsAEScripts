@@ -1,4 +1,4 @@
-// @target AfterEffects
+/* @target AfterEffects */
 app.beginUndoGroup("Hide Guide layers");
 var theComp = app.project.activeItem;
 if (theComp instanceof CompItem){

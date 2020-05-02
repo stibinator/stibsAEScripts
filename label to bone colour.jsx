@@ -1,4 +1,4 @@
-// @target AfterEffects
+/* @target AfterEffects */
 // this script automatically colourises the bones created by DUIK
 // to match the label colour of the layer they're on
 function asciiToRGB(str) {  

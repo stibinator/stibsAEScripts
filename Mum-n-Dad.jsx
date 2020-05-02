@@ -1,4 +1,4 @@
-// @target AfterEffects
+/* @target AfterEffects */
 // if multiple layers are selected creates a null that acts as the parent for all selected layers
 // or if one layer is selected makes that the parent for the everything in the comp
 // or if nothing is selected, makes a new null the parent of everything in the comp

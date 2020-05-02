@@ -1,4 +1,4 @@
-// @target aftereffects 
+/* @target aftereffects  */
 // @script "zap spatial tangents"
 
 var thisScript = this;

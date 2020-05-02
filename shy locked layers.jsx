@@ -1,4 +1,4 @@
-// @target AfterEffects
+/* @target AfterEffects */
 app.beginUndoGroup("Shy Locked Layers");
 var theComp = app.project.activeItem;
 if (theComp instanceof CompItem){
