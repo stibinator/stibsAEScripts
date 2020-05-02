@@ -1,10 +1,11 @@
 /* @target AfterEffects */
+/* global app, CompItem */
 // if multiple layers are selected creates a null that acts as the parent for all selected layers
 // or if one layer is selected makes that the parent for the everything in the comp
 // or if nothing is selected, makes a new null the parent of everything in the comp
 app.beginUndoGroup("make parent for comp");
 var nullName = "Parent Null"; //change this to whatever
-
+var layer, theLayer;
 var theComp = app.project.activeItem;
 var newParent = null;
 if (theComp instanceof CompItem){
@@ -27,8 +28,8 @@ if (theComp instanceof CompItem){
     if (! newParent){
         var averagePosition = [0, 0];
         var numChildren = 0;
-        for (var layer = 0; layer < selectedLyr.length; layer++){
-            var theLayer = selectedLyr[layer];
+        for (layer = 0; layer < selectedLyr.length; layer++){
+            theLayer = selectedLyr[layer];
             if (! theLayer.parent){
                 averagePosition += theLayer.position.value;
                 numChildren++;
@@ -40,8 +41,8 @@ if (theComp instanceof CompItem){
         newParent.position.setValue(averagePosition);
     }
     // do the parenting
-    for (var layer = 0; layer < selectedLyr.length; layer++){
-        var theLayer = selectedLyr[layer];
+    for (layer = 0; layer < selectedLyr.length; layer++){
+        theLayer = selectedLyr[layer];
         if (! theLayer.parent){
             if (newParent.index != theLayer.index){
                 var wasLocked = theLayer.locked;

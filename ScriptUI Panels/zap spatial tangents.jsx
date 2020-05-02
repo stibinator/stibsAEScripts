@@ -1,5 +1,9 @@
 /* @target aftereffects  */
-// @script "zap spatial tangents"
+/* @script "zap spatial tangents" */
+/* @includePath = "../(lib)" */
+/* @include getproperties.jsx */
+/* @include "jsextras.jsx" */
+/* global app, Panel, KeyframeInterpolationType, getIndividualProperties,PropertyValueType, contains */
 
 var thisScript = this;
 thisScript.scriptTitle = 'copyMultiLayer';
@@ -84,7 +88,7 @@ thisScript.buildGUI = function (thisObj) {
     if (theProps.length > 0) {
       app.beginUndoGroup('linear Pair');
       //using undefined just feels WRONG. JS sux dogs balls
-      setKeyFrameInterp(theProps, undefined, undefined, multiple = true);
+      setKeyFrameInterp(theProps, undefined, undefined, true);
       app.endUndoGroup();
     }
   };
@@ -110,9 +114,9 @@ thisScript.buildGUI = function (thisObj) {
 };
 //--------------------now for the real hoo-ha------------------
 
-setKeyFrameInterp = function (theProps, interpIn, interpOut, multiple) {
+function setKeyFrameInterp (theProps, interpIn, interpOut, multiple) {
   var theIndividualProps = getIndividualProperties(theProps);
-  for (p = 0; p < theIndividualProps.length; p++) {
+  for (var p = 0; p < theIndividualProps.length; p++) {
     var theKeys = theIndividualProps[p].selectedKeys;
     var spatialTangentIn;
     var spatialTangentOut;
@@ -149,6 +153,6 @@ setKeyFrameInterp = function (theProps, interpIn, interpOut, multiple) {
       }
     }
   }
-};
+}
 
 thisScript.run();
