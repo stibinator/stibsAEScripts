@@ -4,6 +4,7 @@ var theSelectedComps = app.project.selection;
 app.beginUndoGroup('Fit all layers to selected comp width');
 var n = 0;
 try{
+    if (! theSelectedComps.length){throw ("no comps selected. Silly rabbit.");}
     for(var i = 0; i < theSelectedComps.length; i++){
         var theComp = theSelectedComps[i];
         var theLayers = theComp.layers;
