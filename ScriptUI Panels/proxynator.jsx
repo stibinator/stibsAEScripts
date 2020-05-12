@@ -77,10 +77,9 @@ function chooseProxyFolder(startPath) {
   // only update the proxy folder value if a new folder is actually choosen
   // selectDialog or selectDlg return null if user cancels, but if the proxy folder is already set
   // we don't want to overwrite it.
-  if (typeof newFolder !== 'undefined'){
-    if (newFolder){
-      writePrefs(newFolder);
-    }
+
+  if (newFolder){
+    writePrefs(newFolder);
     return newFolder; 
   } else {
     return false;
