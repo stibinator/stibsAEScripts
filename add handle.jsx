@@ -11,12 +11,12 @@ function addHandleNull(theLayer, theHandle) {
 
 function addCompHandle() {
     var proj = app.project;
-    var scriptName = "create handle";
+    var scriptName = "add handle";
     var existingLayers = [];
     // change this to true if you want to leave locked layers untouched.
-    var unlockedOnly = false;
+    var doLockedLayers = true;
     if (proj) {
-
+        app.beginUndoGroup(scriptName);
         var comp = app.project.activeItem;
         if (comp) {
             //make a separate array containing all the layers
@@ -34,13 +34,18 @@ function addCompHandle() {
                 }
             }
             //here comes the hoo-ha:
-            app.beginUndoGroup(scriptName);
             //make the handle layer
             var theHandle = comp.layers.addNull();
             theHandle.name = "comp handle";
             //loop through and parent the layers to the handle
             for (var i = 0; i < existingLayers.length; i++) {
-                if ((unlockedOnly && (!existingLayers[i].locked)) | (!unlockedOnly)) {
+                if ( existingLayers[i].locked ){
+                    if (doLockedLayers){
+                        existingLayers[i].locked = false;
+                        addHandleNull(existingLayers[i], theHandle);
+                        existingLayers[i].locked = true;
+                    }
+                } else {
                     addHandleNull(existingLayers[i], theHandle);
                 }
             }
@@ -50,7 +55,7 @@ function addCompHandle() {
             alert("Please select a comp to use this script", scriptName);
         }
     } else {
-        alert("Please open a project first to use this script, you silly rabbit", scriptName);
+        alert("Please open a project first to use this script", scriptName);
     }
 }
 

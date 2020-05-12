@@ -1,8 +1,8 @@
-/* @target aftereffects  */
-/* @script "zap spatial tangents" */
-/* @includePath = "../(lib)" */
-/* @include getproperties.jsx */
-/* @include "jsextras.jsx" */
+// @target aftereffects
+// @script "zap spatial tangents"
+// @includepath "../(lib)/"
+// @include "getproperties.jsx" 
+// @include "jsextras.jsx"
 /* global app, Panel, KeyframeInterpolationType, getIndividualProperties,PropertyValueType, contains */
 
 var thisScript = this;

@@ -2,9 +2,9 @@
 //the cloninator clones an item in a comp and creates a
 // new source for it in the project (c)2016 Stephen Dixon
 
-/* @includepath "../(lib)"
- @include "duplicate layer source.jsx"
- @include "incrementCompName.jsx" */
+// @includepath "../(lib)"
+// @include "duplicate layer source.jsx"
+// @include "incrementCompName.jsx"
 
 /* global app, Panel, $, isValid, duplicateLayerSource, makeUniqueCompName */
 
@@ -20,39 +20,35 @@ function reinstateButton(theButton) { //reinstate a button with an oldValue prop
 
 function cloninateComp(originalComp, recursionLimit, recurseFootageToo, recursionDepth) {
   var newSource;
-  var oldSource;
   var i;
   var nsLyr;
 
   // recursionLimit < 0 means infinite. We start at recursion level = 0 so if the
   // user has limited it to 0 recursions only dupe the outer layer
   if (recursionLimit < 0 || recursionDepth <= recursionLimit) {
-          
-
-      //easy peasy, the source is a comp
-        newSource = oldSource.duplicate();
-        if (recurseFootageToo) {
-          for (i = 1; i <= newSource.layers.length; i++) {
-            //cloninateLayer, recursing, with footage, replacing
-            $.writeln ("newSource.layers["+i+"].name " + newSource.layers[i].name);
-            cloninateLayer(newSource.layers[i], recursionLimit, recurseFootageToo, true, recursionDepth + 1);
-          }
-        } else {
-          for (nsLyr = 1; nsLyr <= newSource.layers.length; nsLyr++) {
-            // cloninate all the comp layers in the new comp,
-            if (newSource.layers[nsLyr].source !== null) {
-              //  ignore footage layers
-              if (newSource.layers[nsLyr].source.typeName === 'Composition') {
-                //cloninateLayer, recursively, not the footage, replace the source layers
-                cloninateLayer(newSource.layers[nsLyr], recursionLimit, recurseFootageToo, true, recursionDepth + 1);
-              }
-            }
+    //easy peasy, the source is a comp
+    newSource = originalComp.duplicate();
+    if (recurseFootageToo) {
+      for (i = 1; i <= newSource.layers.length; i++) {
+        //cloninateLayer, recursing, with footage, replacing
+        $.writeln ("newSource.layers["+i+"].name " + newSource.layers[i].name);
+        cloninateLayer(newSource.layers[i], recursionLimit, recurseFootageToo, true, recursionDepth + 1);
+      }
+    } else {
+      for (nsLyr = 1; nsLyr <= newSource.layers.length; nsLyr++) {
+        // cloninate all the comp layers in the new comp,
+        if (newSource.layers[nsLyr].source !== null) {
+          //  ignore footage layers
+          if (newSource.layers[nsLyr].source.typeName === 'Composition') {
+            //cloninateLayer, recursively, not the footage, replace the source layers
+            cloninateLayer(newSource.layers[nsLyr], recursionLimit, recurseFootageToo, true, recursionDepth + 1);
           }
         }
-      } 
-
-        newSource.name = makeUniqueCompName(oldSource);
       }
+    }
+  } 
+  newSource.name = makeUniqueCompName(originalComp);
+}
 
 function cloninateLayer(originalLayer, recursionLimit, recurseFootageToo, replaceOriginal, recursionDepth) {
   var newSource;
@@ -83,7 +79,6 @@ function cloninateLayer(originalLayer, recursionLimit, recurseFootageToo, replac
         if (recurseFootageToo) {
           for (i = 1; i <= newSource.layers.length; i++) {
             //cloninateLayer, recursing, with footage, replacing
-            $.writeln ("newSource.layers["+i+"].name " + newSource.layers[i].name);
             cloninateLayer(newSource.layers[i], recursionLimit, recurseFootageToo, true, recursionDepth + 1);
           }
         } else {
@@ -172,14 +167,14 @@ function buildUI(thisObj) {
     btnGrp = pal.add('group', undefined, {orientation: 'row'});
     cloninateLayerBttn = btnGrp.add('button', [
       undefined, undefined, 90, 22
-    ], 'cloninateLayer');
+    ], 'cloninate');
     replacinateBttn = btnGrp.add('button', [
       undefined, undefined, 90, 22
     ], 'replacinate');
 
     footageTooChkbx = pal.add('checkbox', [
       undefined, undefined, 180, 22
-    ], ' replace footage in subcomps');
+    ], ' recurse into comps');
 
     recurseGrp = pal.add('panel', undefined, 'recursion level', {alignChildren: "left"});
     recurseGrp.orientation = 'column';

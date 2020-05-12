@@ -1,8 +1,11 @@
+//@target aftereffects
 /* global app */
 
 // eslint-disable-next-line no-unused-vars
-function makeUniqueCompName(oldSource){
+function makeUniqueCompName(oldSource, prefix, suffix){
     if (oldSource.name){
+        if (! suffix) {suffix = ''}
+        if (! prefix) {prefix = ''}
         // Create a unique name, given a layer
         // find a serialnumber suffix if one exists e.g. mypic.jpg_1 
         // everyone stand back… 
@@ -38,7 +41,7 @@ function makeUniqueCompName(oldSource){
             newSourceSerial++;
         }
 
-        return '' + oldSourceBaseName + newSourceSerial;
+        return prefix + oldSourceBaseName + suffix + '_' + newSourceSerial;
     } else {
         return false;
     }

@@ -1,5 +1,6 @@
-/* eslint-disable no-undef */
-// global constants
+// @target aftereffects
+/* global app, Panel, Folder */
+
 var scriptName = "proxinator";
 var prefsFile = Folder.userData.absoluteURI + "/AE_proxinator.prefs";
 
@@ -30,18 +31,23 @@ function proxinate(proxyFolder, items) {
           ".webm",
           ".wmv",
           ".dv",
-          ".omf"
+          ".omf",
+        ];
+        var proxyStrings = [
+          "", "_proxy", "-proxy", " proxy"
         ];
         var foundAProxy = false;
         for (var s = 0; s < suffixes.length & !foundAProxy; s++) {
-          newProxy = new File(proxyFolder.absoluteURI + "/" + originalBaseName + suffixes[s]);
-          if (newProxy.exists) {
-            originals[i].setProxy(newProxy);
-            foundAProxy = true;
-          } 
-          if (!foundAProxy){
-            msg += originalBaseName + "\n";
+          for (var t = 0; t < proxyStrings.length & !foundAProxy; t++) {
+            var newProxy = new File(proxyFolder.absoluteURI + "/" + originalBaseName + proxyStrings[t] + suffixes[s]);
+            if (newProxy.exists) {
+              originals[i].setProxy(newProxy);
+              foundAProxy = true;
+            } 
           }
+        }
+        if (!foundAProxy){
+          msg += originalBaseName + "\n";
         }
         originals[i].selected = false;
         originals[i].selected = true;
@@ -62,6 +68,7 @@ function proxinate(proxyFolder, items) {
 }
 
 function chooseProxyFolder(startPath) {
+  var newFolder = false;
   if (startPath) {
     newFolder = startPath.selectDlg("Choose the source folder for the proxies");
   } else {
@@ -70,18 +77,21 @@ function chooseProxyFolder(startPath) {
   // only update the proxy folder value if a new folder is actually choosen
   // selectDialog or selectDlg return null if user cancels, but if the proxy folder is already set
   // we don't want to overwrite it.
-  if (newFolder){
-    writePrefs(newFolder);
-    proxyFolder = newFolder;
+  if (typeof newFolder !== 'undefined'){
+    if (newFolder){
+      writePrefs(newFolder);
+    }
+    return newFolder; 
+  } else {
+    return false;
   }
-  return proxyFolder;
 }
 
 function getLastFolder() {
-  prefs = new File(prefsFile);
+  var prefs = new File(prefsFile);
   if (prefs.exists) {
     prefs.open("r");
-    lastProxyFolder = new Folder(prefs.read());
+    var lastProxyFolder = new Folder(prefs.read());
     prefs.close();
     if (lastProxyFolder && lastProxyFolder.exists) {
       return lastProxyFolder;
@@ -91,7 +101,7 @@ function getLastFolder() {
 }
 
 function writePrefs(lastProxyFolder) {
-  prefs = new File(prefsFile);
+  var prefs = new File(prefsFile);
   if (prefs.open("w")) {
     prefs.write(lastProxyFolder);
     prefs.close();
@@ -101,7 +111,7 @@ function writePrefs(lastProxyFolder) {
 function buildUI(thisObj) {
   var proxyFolder = getLastFolder();
   if (thisObj instanceof Panel) {
-    pal = thisObj;
+    var pal = thisObj;
   } else {
     pal = new Window("palette", scriptName, undefined, {resizeable: true});
   }
@@ -146,7 +156,7 @@ function buildUI(thisObj) {
 
     chooseProxyFolderBtn.onClick = function() {
       proxyFolder = chooseProxyFolder(proxyFolder);
-      checkProxyFolderAndUpdateText();
+      checkProxyFolderAndUpdateText(proxyFolder, proxyFolderText, proxinateBtn, statusText);
     };
 
     proxinateBtn.onClick = function() {
@@ -171,22 +181,21 @@ function buildUI(thisObj) {
   }
 }
 
-    function checkProxyFolderAndUpdateText(proxyFolder, proxyFolderText, proxinateBtn, statusText) {
-
-      if ( proxyFolder && proxyFolder.fsName) {
-        proxyFolderText.text = proxyFolder.fsName;
-        if  (app.project.selection){
-          statusText.text = "ready to proxinate";
-        } else{
-          statusText.text = "select project items to proxinate";
-        }
-        proxinateBtn.enabled = true;
-      } else {
-        proxyFolderText.text = "<none>";
-        proxinateBtn.enabled = false;
-        statusText.text = "choose a proxy source folder";
-      }
+function checkProxyFolderAndUpdateText(proxyFolder, proxyFolderText, proxinateBtn, statusText) {
+  if ( proxyFolder && proxyFolder.fsName) {
+    proxyFolderText.text = proxyFolder.fsName;
+    if  (app.project.selection){
+      statusText.text = "ready to proxinate";
+    } else{
+      statusText.text = "select project items to proxinate";
     }
+    proxinateBtn.enabled = true;
+  } else {
+    proxyFolderText.text = "<none>";
+    proxinateBtn.enabled = false;
+    statusText.text = "choose a proxy source folder";
+  }
+}
 
 // var proxyFolder = chooseProxyFolder(lastFolder);
 // writePrefs(proxyFolder);

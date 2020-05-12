@@ -1,7 +1,5 @@
-// eslint-disable-next-line
-/* includepath "../(lib)" */
-// eslint-disable-next-line
-/* include  getproperties.jsx */
+// includepath "../(lib)"
+// include  "getproperties.jsx"
 
 /* global app, Panel, getPropertiesWithExpressionsFromLayer */
 
@@ -14,11 +12,13 @@ var resumePausedText = "Resume paused Xps";
 var startAllText = "Start disabled Xps";
 var removeAllText = "Remove Xps";
 var freezeText = "Freeze Xps at current value";
+var freezeAtKFText = "Freeze Xps at KeyFrames";
 var selectedOnlyLabel = '..on selected layers only';
 var selectedPropsOnlyLabel = '..on selected properties only';
 var includeLockedLabel = ' Include locked layers';
 var removeExpUndoGrpLabel = "remove all expressions";
 var freezeExpressionsUndoGrpLabel = "freeze all expressions";
+var freezeExpressionsAtKFUndoGrpLabel = "freeze expressions at keyframes"
 var startExpressionsUndoGrpLabel = "start all disabled expressions";
 var convertText = "Xps > Keyframes"
 var convertExpressionsUndoGrpLabel = "Convert all expressions to KFs"
@@ -56,6 +56,9 @@ function buildUI(thisObj) {
         var freezeExpressionsBtn = xpPanel.add("button", [
             undefined, undefined, 200, 22
         ], freezeText);
+        var freezeExpressionsAtKFBtn = xpPanel.add("button", [
+            undefined, undefined, 200, 22
+        ], freezeAtKFText);
 
         var convertAllExpressionsBtn = xpPanel.add("button", [
             undefined, undefined, 200, 22
@@ -182,6 +185,15 @@ function buildUI(thisObj) {
             app.endUndoGroup();
         };
 
+        freezeExpressionsAtKFBtn.onClick = function() {
+            app.beginUndoGroup(freezeExpressionsAtKFUndoGrpLabel);
+            var theLayers = getTheLayers(selectedOnlyCheckbox.value);
+            if (theLayers.length > 0) {
+                freezeExpressionsAtKFs(theLayers, includeLockedCheckBox.value, selectedPropsOnlyCheckbox.value);
+            }
+            app.endUndoGroup();
+        };
+
         convertAllExpressionsBtn.onClick = function() {
             app.beginUndoGroup(convertExpressionsUndoGrpLabel);
             var theLayers = getTheLayers(selectedOnlyCheckbox.value);
@@ -277,6 +289,25 @@ function freezeExpressions(theLayers, includeLocked, onlySelectedProps) {
         //create keyframes from our expression - if the property already has KFs then we need to add a new keyframe
         if (expressionProps[i].numKeys > 0) {
             expressionProps[i].setValueAtTime(app.project.activeItem.time, expressionProps[i].valueAtTime(app.project.activeItem.time, false));
+        } else {
+            //set the static value of the property
+            expressionProps[i].setValue(expressionProps[i].valueAtTime(app.project.activeItem.time, false));
+        }
+        expressionProps[i].expressionEnabled = false;
+    }
+}
+
+function freezeExpressionsAtKFs(theLayers, includeLocked, onlySelectedProps) {
+    var expressionProps = getExpressions(theLayers, includeLocked, onlySelectedProps);
+
+    for (var i = 0; i < expressionProps.length; i++) {
+        //create keyframes from our expression - if the property already has KFs then we need to add a new keyframe
+        if (expressionProps[i].numKeys > 0) {
+                            
+            for (var k = 1; k <= expressionProps[i].numKeys; k++){
+
+                expressionProps[i].setValueAtTime(expressionProps[i].keyTime(k), expressionProps[i].valueAtTime(expressionProps[i].keyTime(k), false));
+            }
         } else {
             //set the static value of the property
             expressionProps[i].setValue(expressionProps[i].valueAtTime(app.project.activeItem.time, false));
