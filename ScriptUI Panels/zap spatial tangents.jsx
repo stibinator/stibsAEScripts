@@ -65,6 +65,7 @@ thisScript.buildGUI = function (thisObj) {
       setKeyFrameInterp(theProps, KeyframeInterpolationType.LINEAR, KeyframeInterpolationType.BEZIER);
       app.endUndoGroup();
     }
+    linearIn.active = false;
   };
   linearOut.onClick = function () {
     var theProps = app.project.activeItem.selectedProperties;
@@ -73,6 +74,7 @@ thisScript.buildGUI = function (thisObj) {
       setKeyFrameInterp(theProps, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.LINEAR);
       app.endUndoGroup();
     }
+    linearOut.active = false;
   };
   linearInOut.onClick = function () {
     var theProps = app.project.activeItem.selectedProperties;
@@ -81,6 +83,7 @@ thisScript.buildGUI = function (thisObj) {
       setKeyFrameInterp(theProps, KeyframeInterpolationType.LINEAR, KeyframeInterpolationType.LINEAR);
       app.endUndoGroup();
     }
+    linearInOut.active = false;
   };
 
   linearPair.onClick = function () {
@@ -91,6 +94,7 @@ thisScript.buildGUI = function (thisObj) {
       setKeyFrameInterp(theProps, undefined, undefined, true);
       app.endUndoGroup();
     }
+    linearPair.active = false;
   };
   // bezierInOut.onClick = function() {     var theProps =
   // app.project.activeItem.selectedProperties;     if (theProps.length > 0) {
