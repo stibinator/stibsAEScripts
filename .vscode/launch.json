@@ -11,7 +11,7 @@
             "name": "current file",
             "program": "${file}",
             "cwd": "${workspaceFolder}",
-            "stopOnEntry": false
+            // "stopOnEntry": true
         },
         {
             "type": "extendscript-debug",

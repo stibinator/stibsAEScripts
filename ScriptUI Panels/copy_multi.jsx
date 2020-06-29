@@ -1,15 +1,14 @@
-//@target aftereffects
+// @target aftereffects
 // Code here will be ignored by JSHint.
-/* includepath "../(lib)" */
-/* include "defaultFor.jsx" */
-/* include "timeconversions.jsx" */
-/* include "spacetransforms.jsx" */
-/* include "vectormaths.jsx" */
-/* include "getproperties.jsx" */
-/* include "copyproperties-makekey.jsx" */
-/* include "preferences.jsx" */
+// @includepath "../(lib)"
+// @include "defaultFor.jsx"
+// @include "timeconversions.jsx"
+// @include "spacetransforms.jsx"
+// @include "vectormaths.jsx"
+// @include "getproperties.jsx"
+// @include "copyproperties-makekey.jsx"
 // @script "copyMultiLayer"
-/* global app, Panel, ScriptUI, CompItem, writeln, makeKeyWithAttributes, makeKeyAtTime, setKeyAttributesReversed, copyKeyAttributes, defaultFor, getIndividualProperties */
+/* global app, Panel, ScriptUI, CompItem, makeKeyWithAttributes, makeKeyAtTime, setKeyAttributesReversed, copyKeyAttributes, defaultFor, getIndividualProperties */
 
 var thisScript = this;
 thisScript.scriptTitle = "copyMultiLayer";
@@ -21,7 +20,7 @@ thisScript.run = function() {
 };
 
 thisScript.buildGUI = function(thisObj) {
-    //thisObj.theCopiedKeys = thisObj.prefs.readFromPrefs();
+    // thisObj.theCopiedKeys = thisObj.prefs.readFromPrefs();
     thisObj.w = (thisObj instanceof Panel)? thisObj: new Window("palette", thisObj.scriptTitle, undefined, {resizeable: true});
     thisObj.w.alignChildren = ['left', 'top'];
     //thisObj.text = "vers. 0.1.1";
@@ -32,45 +31,22 @@ thisScript.buildGUI = function(thisObj) {
 
     var row1 = thisObj.w.add("group{orientation:'row', alignment: ['fill','fill'], alignChildren: ['left','fill']}");
     var row2 = thisObj.w.add("group{orientation:'row', alignment: ['fill','fill'], alignChildren: ['left','fill']}");
-    var copyBttn = row1.add("iconbutton", {
-        "x": undefined,
-        "y": undefined,
-        "width": 32,
-        "height": 32
-    }, File("copy_multi/copy.png"));
-    var pasteBttn = row1.add("iconbutton", {
-        "x": undefined,
-        "y": undefined,
-        "width": 32,
-        "height": 32
-    }, File("copy_multi/paste.png"));
-    var pasteRevBttn = row1.add("iconbutton", {
-        "x": undefined,
-        "y": undefined,
-        "width": 32,
-        "height": 32
-    }, File("copy_multi/paste_rev.png"));
-    var beforeAfterToggle = row1.add("iconbutton", {
-        "x": undefined,
-        "y": undefined,
-        "width": 32,
-        "height": 32
-    }, afterPH, {
-        style: 'toolbutton',
-        toggle: true
-    });
-    var copyPasteBttn = row2.add("iconbutton", {
+    var row3 = thisObj.w.add("group{orientation:'row', alignment: ['fill','fill'], alignChildren: ['left','fill']}");
+
+    var copyPasteBttn = row1.add("iconbutton", {
         "x": undefined,
         "y": undefined,
         "width": 32,
         "height": 32
     }, File("copy_multi/copy-paste.png"));
-    var copyPasteRevBttn = row2.add("iconbutton", {
+
+    var copyPasteRevBttn = row1.add("iconbutton", {
         "x": undefined,
         "y": undefined,
         "width": 32,
         "height": 32
     }, File("copy_multi/copy-paste_rev.png"));
+
     var copyTimeSliceBttn = row2.add("iconbutton", {
         "x": undefined,
         "y": undefined,
@@ -84,10 +60,19 @@ thisScript.buildGUI = function(thisObj) {
         "height": 32
     }, File("copy_multi/paste-TS.png"));
 
-    copyBttn.helpTip = "copy";
+    var beforeAfterToggle = row3.add("iconbutton", {
+        "x": undefined,
+        "y": undefined,
+        "width": 32,
+        "height": 32
+    }, afterPH, {
+        style: 'toolbutton',
+        toggle: true
+    });
+    // copyBttn.helpTip = "copy";
+    // pasteBttn.helpTip = "paste";
+    // pasteRevBttn.helpTip = "paste reversed";
     copyPasteBttn.helpTip = "copy + paste";
-    pasteBttn.helpTip = "paste";
-    pasteRevBttn.helpTip = "paste reversed";
     copyPasteRevBttn.helpTip = "copy + paste reversed";
     beforeAfterToggle.helpTip = "paste reversed keys before / after playhead";
     copyTimeSliceBttn.helpTip = "copy time slice of selected layers";
@@ -98,79 +83,77 @@ thisScript.buildGUI = function(thisObj) {
     // pasteRevBttn.preferredSize = [42, 42];
     // copyPasteRevBttn.preferredSize = [42, 42];
 
-    pasteBttn.active = false;
-    pasteRevBttn.active = false;
-    pasteTimeSliceBttn.active = false;
+    // pasteBttn.enabled = false;
+    // pasteRevBttn.enabled = false;
+    // pasteTimeSliceBttn.enabled = false;
 
-    copyBttn.onClick = function() {
-        var theComp = app.project.activeItem;
-        if (theComp instanceof CompItem) {
-            app.beginUndoGroup("copy keys");
-            thisObj.theCopiedKeys = thisObj.copySelectedKeys(theComp);
-            //thisObj.prefs.saveToPrefs(thisObj.theCopiedKeys);
-            app.endUndoGroup();
-            pasteBttn.active = true;
-            pasteRevBttn.active = true;
-        }
-    };
+    // copyBttn.onClick = function() {
+    //     var theComp = app.project.activeItem;
+    //     if (theComp instanceof CompItem) {
+    //         app.beginUndoGroup("copy keys");
+    //         thisObj.theCopiedKeys = thisObj.copySelectedKeys(theComp);
+    //         thisObj.prefs.saveToPrefs(thisObj.theCopiedKeys);
+    //         app.endUndoGroup();
+    //         pasteBttn.enabled = true;
+    //         pasteRevBttn.enabled = true;
+    //     }
+    // };
 
-    pasteBttn.onClick = function() {
-        var theComp = app.project.activeItem;
-        if (theComp instanceof CompItem) {
-            app.beginUndoGroup("paste keys");
-            // if (thisObj.theCopiedKeys === null) {
-            //     thisObj.theCopiedKeys = thisObj.prefs.readFromPrefs();
-            // }
-            if (thisObj.theCopiedKeys !== null) {
-                thisObj.pasteKeys(thisObj.theCopiedKeys, beforeAfterToggle.value, theComp);
-            } else {
-                writeln("no copied keys found");
-            }
-            app.endUndoGroup();
-        }
-    };
+    // pasteBttn.onClick = function() {
+    //     var theComp = app.project.activeItem;
+    //     if (theComp instanceof CompItem) {
+    //         app.beginUndoGroup("paste keys");
+    //         if (thisObj.theCopiedKeys === null) {
+    //             thisObj.theCopiedKeys = thisObj.prefs.readFromPrefs();
+    //         }
+    //         if (thisObj.theCopiedKeys !== null) {
+    //             thisObj.pasteKeys(thisObj.theCopiedKeys, beforeAfterToggle.value, theComp);
+    //         } else {
+    //             writeln("no copied keys found");
+    //         }
+    //         app.endUndoGroup();
+    //     }
+    // };
 
     copyPasteBttn.onClick = function() {
         var theComp = app.project.activeItem;
         if (theComp instanceof CompItem) {
-            //callback для кнопки
-            app.beginUndoGroup("copy and paste Keys"); //какое-то Undo
+            app.beginUndoGroup("copy and paste Keys"); 
             thisObj.theCopiedKeys = thisObj.copySelectedKeys(theComp);
             // thisObj.prefs.saveToPrefs(thisObj.theCopiedKeys);
             thisObj.pasteKeys(thisObj.theCopiedKeys, beforeAfterToggle.value, theComp);
             app.endUndoGroup();
-            pasteBttn.active = true;
-            pasteRevBttn.active = true;
+            // pasteBttn.enabled = true;
+            // pasteRevBttn.enabled = true;
         }
     };
 
-    pasteRevBttn.onClick = function() {
-        var theComp = app.project.activeItem;
-        if (theComp instanceof CompItem) {
-            app.beginUndoGroup("paste keys");
-            // if (thisObj.theCopiedKeys === null) {
-            //     thisObj.theCopiedKeys = thisObj.prefs.readFromPrefs();
-            // }
-            if (thisObj.theCopiedKeys !== null) {
-                thisObj.pasteKeysReverse(thisObj.theCopiedKeys, beforeAfterToggle.value, theComp);
-            } else {
-                writeln("no copied keys found");
-            }
-            app.endUndoGroup();
-        }
-    };
+    // pasteRevBttn.onClick = function() {
+    //     var theComp = app.project.activeItem;
+    //     if (theComp instanceof CompItem) {
+    //         app.beginUndoGroup("paste keys");
+    //         if (thisObj.theCopiedKeys === null) {
+    //             thisObj.theCopiedKeys = thisObj.prefs.readFromPrefs();
+    //         }
+    //         if (thisObj.theCopiedKeys !== null) {
+    //             thisObj.pasteKeysReverse(thisObj.theCopiedKeys, beforeAfterToggle.value, theComp);
+    //         } else {
+    //             writeln("no copied keys found");
+    //         }
+    //         app.endUndoGroup();
+    //     }
+    // };
 
     copyPasteRevBttn.onClick = function() {
         var theComp = app.project.activeItem;
         if (theComp instanceof CompItem) {
-            //callback для кнопки
-            app.beginUndoGroup("copy and paste Keys"); //какое-то Undo
+            app.beginUndoGroup("copy and paste Keys"); 
             thisObj.theCopiedKeys = thisObj.copySelectedKeys(theComp);
             // thisObj.prefs.saveToPrefs(thisObj.theCopiedKeys);
             thisObj.pasteKeysReverse(thisObj.theCopiedKeys, beforeAfterToggle.value, theComp);
             app.endUndoGroup();
-            pasteBttn.active = true;
-            pasteRevBttn.active = true;
+            // pasteBttn.enabled = true;
+            // pasteRevBttn.enabled = true;
         }
     };
 
@@ -186,7 +169,7 @@ thisScript.buildGUI = function(thisObj) {
         var theComp = app.project.activeItem;
         if (theComp instanceof CompItem) {
             thisObj.timeSlice = thisScript.copyTimeSlice(theComp);
-            pasteTimeSliceBttn.active = true;
+            pasteTimeSliceBttn.enabled = true;
         }
     };
 
@@ -220,7 +203,6 @@ thisScript.pasteKeys = function(theCopiedKeys, beforePlayHead, theComp) {
 };
 
 thisScript.pasteKeysReverse = function(theCopiedKeys, beforePlayHead, theComp) {
-    //var theCopiedKeys = defaultFor(theCopiedKeys, null);
     if (theCopiedKeys !== null) {
         for (var i = 0; i < theCopiedKeys.keys.length; i++) {
             var theKey = theCopiedKeys.keys[i];

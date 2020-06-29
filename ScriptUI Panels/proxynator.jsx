@@ -1,8 +1,12 @@
 // @target aftereffects
-/* global app, Panel, Folder */
+// @includepath "../(lib)/"
+// @include "preferences.jsx"
+/* global app, Panel, Folder, PrefsFile*/
 
 var scriptName = "proxinator";
-var prefsFile = Folder.userData.absoluteURI + "/AE_proxinator.prefs";
+var prefsFile = new PrefsFile("AE_proxinator.prefs");
+
+buildUI(this, prefsFile);
 
 function proxinate(proxyFolder, items) {
   // set a proxy for all selected items by matching file names in a folder
@@ -79,36 +83,17 @@ function chooseProxyFolder(startPath) {
   // we don't want to overwrite it.
 
   if (newFolder){
-    writePrefs(newFolder);
+    prefsFile.saveToPrefs(newFolder);
     return newFolder; 
   } else {
     return false;
   }
 }
 
-function getLastFolder() {
-  var prefs = new File(prefsFile);
-  if (prefs.exists) {
-    prefs.open("r");
-    var lastProxyFolder = new Folder(prefs.read());
-    prefs.close();
-    if (lastProxyFolder && lastProxyFolder.exists) {
-      return lastProxyFolder;
-    }
-  }
-  return null
-}
 
-function writePrefs(lastProxyFolder) {
-  var prefs = new File(prefsFile);
-  if (prefs.open("w")) {
-    prefs.write(lastProxyFolder);
-    prefs.close();
-  }
-}
 
-function buildUI(thisObj) {
-  var proxyFolder = getLastFolder();
+
+function buildUI(thisObj, prefsFile) {
   if (thisObj instanceof Panel) {
     var pal = thisObj;
   } else {
@@ -151,6 +136,7 @@ function buildUI(thisObj) {
     }, "choose a folder", {truncate: "middle"});
 
 
+    var proxyFolder = prefsFile.readFromPrefs();
     checkProxyFolderAndUpdateText(proxyFolder, proxyFolderText, proxinateBtn, statusText);
 
     chooseProxyFolderBtn.onClick = function() {
@@ -197,6 +183,5 @@ function checkProxyFolderAndUpdateText(proxyFolder, proxyFolderText, proxinateBt
 }
 
 // var proxyFolder = chooseProxyFolder(lastFolder);
-// writePrefs(proxyFolder);
+// prefsFile.saveToPrefs(proxyFolder);
 // proxinate(proxyFolder);
-buildUI(this);

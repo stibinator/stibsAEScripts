@@ -1,4 +1,6 @@
-﻿function copyKeyAttributes(theProperty, keyIndex) {
+﻿/* global KeyframeInterpolationType, PropertyValueType, writeLn */
+// eslint-disable-next-line no-unused-vars
+function copyKeyAttributes(theProperty, keyIndex) {
 	//in lieu of a proper keyframe object this returns all the details of a keyframe, given a property and key index.
 	var theAttributes = {
 	} ;
@@ -27,6 +29,7 @@
 	return theAttributes;
 }
 
+// eslint-disable-next-line no-unused-vars
 function makeKeyWithAttributes(theProperty, keyAttributes, keyTime) {
 	//turns theAttributes from copyKeyAttributes into a new keyframe
 	if (theProperty.canVaryOverTime){
@@ -55,6 +58,7 @@ function makeKeyWithAttributes(theProperty, keyAttributes, keyTime) {
 }
 
 //make key but don't set attributes
+// eslint-disable-next-line no-unused-vars
 function makeKeyAtTime(theProperty, keyAttributes, keyTime) {
   //makes the key, but time-reversed, so that the temporal and spatial interpolation goes out->in rather than in->out
   theProperty.setValueAtTime(keyTime, keyAttributes.keyVal);
@@ -62,6 +66,7 @@ function makeKeyAtTime(theProperty, keyAttributes, keyTime) {
 }
 
 //set attributes
+// eslint-disable-next-line no-unused-vars
 function setKeyAttributes(theProperty, keyAttributes, keyTime){
   var newKeyIndex = theProperty.nearestKeyIndex(keyTime); //I wish Adobe would just make a keyframe class
   if (keyAttributes.canInterp) {
@@ -77,6 +82,7 @@ function setKeyAttributes(theProperty, keyAttributes, keyTime){
 }
 
 //set attribute in reverse
+// eslint-disable-next-line no-unused-vars
 function setKeyAttributesReversed(theProperty, keyAttributes, keyTime){
   var newKeyIndex = theProperty.nearestKeyIndex(keyTime); //I wish Adobe would just make a keyframe class
   if (keyAttributes.canInterp) {
