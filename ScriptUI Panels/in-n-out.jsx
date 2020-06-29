@@ -3,215 +3,202 @@
 /* include ../(lib)/jsextras.jsx */
 /* global app, Panel, CompItem, timeToCurrentFormat, currentFormatToTime, writeln */
 
-var fnList = [
-  'linear',
-  'exponential',
-  'sigmoid',
-  'random',
-  '-',
-  'align footge Start times',
-  'align footage end times'//,
-  // '-',
-  // '-'
-]; // the two dashes at the end are because of UI bug in 2015.3
-var orderList = [
-  'index',
-  'reverse index',
-  'random',
-  'selection',
-  'reverse selection',
-  'current order',
-  'reverse current order',
-  'alphabetical',
-  'reverse alphabetical' //,
-  // '-',
-  // '-',
-  // '-',
-  // '-'
-]; // the two dashes at the end are because of UI bug in 2015.3
+var fns = {
+    linear: 'linear',
+    exponential: 'exponential',
+    sigmoid: 'sigmoid',
+    random: 'random'
+};
+var orders = {
+    index: 'index',
+    random: 'random',
+    selection: 'selection',
+    current: 'current order',
+    alphabetical: 'alphabetical',
+};
 
-// ----------------- maths fun -----------------------------
+var IN = 0;
+var OUT = 1;
+var inAndOut = ["in point", "out point"];
+// ----------------- Maths fun -----------------------------
 function exponential(x, p) {
-  //return a value 0-1 based on the exponential function, of order p
-  if (x <= 0) {
-    return 0;
-  }
+    //return a value 0-1 based on the exponential function, of order p
+    if (x <= 0) {
+        return 0;
+    }
 
-  if (x >= 1) {
-    return 1;
-  }
+    if (x >= 1) {
+        return 1;
+    }
 
-  return Math.pow(x, p);
+    return Math.pow(x, p);
 }
 
 function sigmoid(x, p) {
-  // sigmoid function for 0<=x<=1 returns a variable s-shaped slope where 0<=y<=1,
-  // and that always passes through [0,0] and [1,1] took a while to figure out
-  // see https://www.desmos.com/calculator/40sqnfw8hf
+    // sigmoid function for 0<=x<=1 returns a variable s-shaped slope where 0<=y<=1,
+    // and that always passes through [0,0] and [1,1] took a while to figure out
+    // see https://www.desmos.com/calculator/40sqnfw8hf
 
-  if (x <= 0) {
-    return 0;
-  }
-  if (x >= 1) {
+    if (x <= 0) {
+        return 0;
+    }
+    if (x >= 1) {
+        return 1;
+    }
+
+    if (p > 0) {
+        var g = function(n) {
+            return (Math.pow(1 / n, p));
+        };
+        return g(1 - x) / (g(x) + g(1 - x));
+    }
     return 1;
-  }
-
-  if (p > 0) {
-    var g = function (n) {
-      return (Math.pow(1 / n, p));
-    };
-    return g(1 - x) / (g(x) + g(1 - x));
-  }
-  return 1;
 }
 
 // ----------- useful ------------------------
 function defaultFor(arg, val, replaceNullandEmptyVals) {
-  if (replaceNullandEmptyVals) {
-    return ((typeof(arg) !== 'undefined') || (arg === null) || (arg === []))
-    ? val
-    : arg;
-  }
-  return (typeof(arg) !== 'undefined')
-  ? arg
-  : val;
+    if (replaceNullandEmptyVals) {
+        return ((typeof(arg) !== 'undefined') || (arg === null) || (arg === [])) ?
+            val :
+            arg;
+    }
+    return (typeof(arg) !== 'undefined') ?
+        arg :
+        val;
 }
 
 // ----------- timeconversions--------------------
 function percentToHMSF(percent, acomp) {
-  var theComp = defaultFor(acomp, app.project.activeItem);
-  if (theComp instanceof CompItem) {
-    return timeToCurrentFormat(percent * theComp.duration / 100, 1 / theComp.frameDuration);
-  }
-  return false;
+    var theComp = defaultFor(acomp, app.project.activeItem);
+    if (theComp instanceof CompItem) {
+        return timeToCurrentFormat(percent * theComp.duration / 100, 1 / theComp.frameDuration);
+    }
+    return false;
 }
 
 //here comes the hoo-ha
-function sequenceLayers(order, firstStartTime, endTime, ease, easePower, regularity, doInPoints, theComp, moveNotTrim) { //}, randoz) {
-  var shouldDoInPoints = doInPoints;
-  var i;
-  if (!theComp) {
-    alert('choose some layers in a comp');
-  } else {
-    var theLayers = theComp.selectedLayers;
-    // if no layers are selected do all of them, lightwave style.
-    // if (theLayers.length === 0) {
-    //   theLayers = [];
-    //   // what were Adobe thinking when they didn't make comp.layers a proper array?
-    //   for (i = 1; i <= theComp.layers.length; i++) {
-    //     theLayers[i] = theComp.layers[i];
-    //   }
-    // }
-    if (theLayers.length < 2) {
-      alert('choose at least 2 layers in a comp');
+function sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity, doInPoints, theComp, moveNotTrim, firstInOrOut, lastInOrOut) { //}, randoz) {
+    var shouldDoInPoints = doInPoints;
+    var i;
+    if (!theComp) {
+        alert('choose some layers in a comp');
     } else {
-      if (order === 'index') {
-        theLayers
-        .sort(function (a, b) {
-          return (a.index - b.index);
-        });
-      } else if (order === 'reverse index') {
-        theLayers
-        .sort(function (a, b) {
-          return (b.index - a.index);
-        });
-      } else if (order === 'random') {
-        theLayers
-        .sort(function () {
-          return (1 - Math.random() * 2);
-        });
-        // sort by selection is unneccesary - that's the order they're already in
-      } else if (order === 'reverse selection') {
-        theLayers
-        .sort(function () {
-          return (1);
-        });
-      } else if (order === 'current order') {
-        theLayers
-        .sort(function (a, b) {
-          return (a.inPoint - b.inPoint);
-        });
-      } else if (order === 'reverse current order') {
-        theLayers
-        .sort(function (a, b) {
-          return (b.inPoint - a.inPoint);
-        });
-      } else if (order === 'alphabetical') {
-        theLayers
-        .sort(function (a, b) {
-          if (a.name === b.name) {
-            return 0;
-          }
-          return (a.name > b.name)
-          ? -1
-          : 1;
-        });
-      } else if (order === 'reverse alphabetical') {
-        theLayers
-        .sort(function (a, b) {
-          return (a.name < b.name);
-        });
-      }
+        var theLayers = theComp.selectedLayers;
+        // if no layers are selected do all of them, lightwave style.
+        // if (theLayers.length === 0) {
+        //   theLayers = [];
+        //   // what were Adobe thinking when they didn't make comp.layers a proper array?
+        //   for (i = 1; i <= theComp.layers.length; i++) {
+        //     theLayers[i] = theComp.layers[i];
+        //   }
+        // }
+        if (theLayers.length > 2) {
+            switch (order) {
+                case orders.index:
+                    theLayers
+                        .sort(function(a, b) {
+                            return (a.index - b.index);
+                        });
+                    break;
+                case orders.random:
+                    theLayers
+                        .sort(function() {
+                            return (1 - Math.random() * 2);
+                        });
+                    break;
+                case orders.current:
+                    theLayers
+                        .sort(function(a, b) {
+                            return (a.inPoint - b.inPoint);
+                        });
+                    break;
+                case orders.alphabetical:
+                    theLayers
+                        .sort(function(a, b) {
+                            if (a.name === b.name) {
+                                return 0;
+                            }
+                            return (a.name > b.name) ?
+                                -1 :
+                                1;
+                        });
+                    break;
+            }
+            var numLayers = theLayers.length;
+            var n = numLayers - 1; //just for readability
 
-      var fDur = theComp.frameDuration;
-      var timeSpan = endTime - firstStartTime;
-      var startOffset;
-      var outOffset; //the offset between the layer's start time and its in-point, and its active duration
-      var numLayers = theLayers.length;
+            if (moveNotTrim) {
+                if (firstInOrOut === OUT & doInPoints) {
+                    firstTime -= theLayers[0].outPoint - theLayers[0].inPoint;
+                } else if (firstInOrOut === IN & !doInPoints) {
+                    firstTime += theLayers[0].outPoint - theLayers[0].inPoint;
+                }
 
-      // var theFammilies = makeFamilies(theLayers);
+                if (lastInOrOut === OUT & doInPoints) {
+                    lastTime -= theLayers[n].outPoint - theLayers[n].inPoint;
+                } else if (lastInOrOut === IN & !doInPoints) {
+                    lastTime += theLayers[n].outPoint - theLayers[n].inPoint;
+                }
+            }
 
-      // var randoz = 1 - regularity;
-      var myTime = 0;
-      var layerIndex = 0;
-      for (i = 0; i < numLayers; i++) {
-        layerIndex = i;
-        if (regularity < 1 && i > 0 && i < (numLayers - 1)) { //always make the first and last keyframe on time
-          //although we're using the layer index as the input it doesn't have to be integral. This adds some irregularity
-          var n = numLayers - 1; //just for readability
-          //this took a while:
-          layerIndex = i + Math.random() * (1 - regularity) * (((n - 1) / n) - (n - i) / (n - 1)); //randomise layers so they can start at any
-          // time between when the last layer could start and the next might, but make
-          // sure the first and last layers start on time this should be simple, but we
-          // have to make sure that there isn't always a gap after the first layer or
-          // before the last this spreads the randomness. Trust me, I worked it out on
-          // paper.
+
+            var fDur = theComp.frameDuration;
+            var timeSpan = lastTime - firstTime;
+            var startOffset;
+            var outOffset; //the offset between the layer's start time and its in-point, and its active duration
+            var myTime = 0;
+            var layerIndex = 0;
+            for (i = 0; i < numLayers; i++) {
+                layerIndex = i;
+                if (regularity < 1 && i > 0 && i < (numLayers - 1)) { //always make the first and last keyframe on time
+                    //although we're using the layer index as the input it doesn't have to be an integer. This adds some irregularity
+                    //this took a while:
+                    layerIndex = i + Math.random() * (1 - regularity) * (((n - 1) / n) - (n - i) / (n - 1)); //randomise layers so they can start at any
+                    // time between when the last layer could start and the next might, but make
+                    // sure the first and last layers start on time this should be simple, but we
+                    // have to make sure that there isn't always a gap after the first layer or
+                    // before the last this spreads the randomness. Trust me, I worked it out on
+                    // paper.
+                }
+
+                switch (ease) {
+                    case fns.linear:
+                        myTime = firstTime + timeSpan * layerIndex / (numLayers - 1);
+                        break;
+                    case fns.exponential:
+                        myTime = firstTime + timeSpan * exponential(layerIndex / (numLayers - 1), easePower);
+                        break;
+                    case fns.sigmoid:
+                        myTime = firstTime + timeSpan * sigmoid(layerIndex / (numLayers - 1), easePower);
+                        break;
+                    default: //kompletelely randoz
+                        myTime = firstTime + timeSpan * Math.random();
+                }
+
+                var theLayer = theLayers[i];
+                if (moveNotTrim) { //move the layer
+                    if (shouldDoInPoints) {
+                        startOffset = theLayer.inPoint - theLayer.startTime;
+                        theLayer.startTime = Math.round(myTime / fDur) * fDur - startOffset; //round it to the nearest frame boundary
+                    } else {
+                        outOffset = theLayer.outPoint - theLayer.startTime;
+                        theLayer.startTime = Math.round(myTime / fDur) * fDur - outOffset; //round it to the nearest frame boundary
+                    }
+                } else { //trim the in or out point
+                    if (doInPoints) {
+                        var currentOutPoint = theLayer.outPoint;
+                        theLayer.inPoint = Math.min(Math.round(myTime / fDur) * fDur, currentOutPoint - fDur);
+                        theLayer.outPoint = currentOutPoint;
+                    } else {
+                        var currentInPoint = theLayer.inPoint;
+                        theLayer.outPoint = Math.max(Math.round(myTime / fDur) * fDur, currentInPoint + fDur );
+                    //    alert(theLayer.outPoint);
+                    //    theLayer.inPoint = currentInPoint;
+                    }
+                }
+            }
         }
-
-        if (ease === 'linear') {
-          myTime = firstStartTime + timeSpan * layerIndex / (numLayers - 1);
-        } else if (ease === 'exponential') {
-          myTime = firstStartTime + timeSpan * exponential(layerIndex / (numLayers - 1), easePower);
-        } else if (ease === 'sigmoid') {
-          myTime = firstStartTime + timeSpan * sigmoid(layerIndex / (numLayers - 1), easePower);
-        } else if (ease === 'align Start Time') {
-          myTime = firstStartTime + theLayers[i].inpoint - theLayers[i].startTime;
-          shouldDoInPoints = true;
-        } else if (ease === 'align end Time') {
-          myTime = endTime - theLayers[i].duration + theLayers[i].inPoint;
-          shouldDoInPoints = false;
-        } else { //kompletlely randoz
-          myTime = firstStartTime + timeSpan * Math.random();
-        }
-
-        if (moveNotTrim) { //move the layer
-          if (shouldDoInPoints) {
-            startOffset = theLayers[i].inPoint - theLayers[i].startTime;
-            theLayers[i].startTime = Math.round(myTime / fDur) * fDur - startOffset; //round it to the nearest frame boundary
-          } else {
-            outOffset = theLayers[i].outPoint - theLayers[i].startTime;
-            theLayers[i].startTime = Math.round(myTime / fDur) * fDur - outOffset; //round it to the nearest frame boundary
-          }
-        } else { //trim the in or out point
-          if (doInPoints) {
-            theLayers[i].inPoint = Math.round(myTime / fDur) * fDur;
-          } else {
-            theLayers[i].outPoint = Math.round(myTime / fDur) * fDur;
-          }
-        }
-      }
     }
-  }
 }
 
 // function makeFamilies(theLayers){
@@ -226,262 +213,311 @@ function sequenceLayers(order, firstStartTime, endTime, ease, easePower, regular
 
 
 function buildGUI(thisObj) {
-  var theComp = (app.project.activeItem || {
-    duration: 60,
-    frameDuration: 1 / 25,
-    time: 0
-  });
-  var theWindow = (thisObj instanceof Panel)
-  ? thisObj
-  : new Window('palette', thisObj.scriptTitle, undefined, {resizeable: true});
+    var theComp = (app.project.activeItem || {
+        duration: 60,
+        frameDuration: 1 / 25,
+        time: 0
+    });
+    var theWindow = (thisObj instanceof Panel) ?
+        thisObj :
+        new Window('pavarte', thisObj.scriptTitle, undefined, {
+            resizeable: true
+        });
 
-  // we need a comp for things like the sliders which are set based on the
-  // duration, and for the frameDuration, so we'll set up a dummy object
+    // we need a comp for things like the sliders which are set based on the
+    // duration, and for the frameDuration, so we'll set up a dummy object
 
-  var mainGroup = theWindow.add("group{orientation:'column',alignment:['left','top'],alignChildren:['left','top']" +
-  '}');
-
-  var doTheStuff = mainGroup.add('button', undefined, 'Sequence layers');
-  mainGroup.add('staticText', undefined, 'Sequence order');
-  var orderDropDown = mainGroup.add('dropDownList', [
-    undefined, undefined, 150, undefined
-  ], orderList);
-
-  var firstTxtGrp = mainGroup.add('group{orientation: "row"}');
-  firstTxtGrp.add('staticText', undefined, 'first in-point (% of comp length)');
-  var firstBttn = firstTxtGrp.add('button', undefined, 'set to current');
-  var firstGrp = mainGroup.add("group{orientation:'row'}");
-  var firstSlider = firstGrp.add('slider', undefined, 0, 0, 100);
-  var firstHmsfText = firstGrp.add('editText', [
-    undefined, undefined, 76, 28
-  ], percentToHMSF(firstSlider.value, theComp));
-
-  var lastTxtGrp = mainGroup.add('group{orientation: "row"}');
-  lastTxtGrp.add('staticText', undefined, 'last in-point (% of comp length)');
-  var lastBttn = lastTxtGrp.add('button', undefined, 'set to current');
-  var lastGrp = mainGroup.add("group{orientation:'row'}");
-  var lastSlider = lastGrp.add('slider', undefined, 100, 0, 100);
-  var lastHmsfText = lastGrp.add('editText', [
-    undefined, undefined, 76, 28
-  ], percentToHMSF(lastSlider.value, theComp));
-
-  mainGroup.add('staticText', undefined, 'easing type');
-  var fnTypeDropDown = mainGroup.add('dropDownList', [
-    undefined, undefined, 150, undefined
-  ], fnList);
-  mainGroup.add('staticText', undefined, 'ease amount');
-  var pwrGrp = mainGroup.add("group{orientation:'row'}");
-  var pwrSlider = pwrGrp.add('slider', undefined, 4, 0, 8);
-  var pwrEdit = pwrGrp.add('editText', [undefined, undefined, 40, 28], '' + pwrSlider.value);
-  mainGroup.add('staticText', undefined, 'regularity');
-  var regularityGrp = mainGroup.add("group{orientation:'row'}");
-  var regularitySlider = regularityGrp.add('slider', undefined, 100, -200, 100);
-
-  var inOrOut = mainGroup.add("group{orientation:'row'}");
-  var inChckBox = inOrOut.add('checkbox', undefined, 'inPoints');
-  var outChckBox = inOrOut.add('checkbox', undefined, 'outPoints');
-
-  var trimOrMove = mainGroup.add("group{orientation:'row'}");
-  var moveChckBox = trimOrMove.add('checkbox', undefined, 'move');
-  var trimChckBox = trimOrMove.add('checkbox', undefined, 'trim');
+    var mainGroup = theWindow.add("group{orientation:'column',alignment:['left','top'],alignChildren:['left','top']" +
+        '}');
 
 
-  fnTypeDropDown.selection = 1;
-  pwrSlider.size = {
-    width: 200,
-    height: 10
-  };
-  regularitySlider.size = {
-    width: 200,
-    height: 10
-  };
-  inChckBox.value = true;
-  outChckBox.value = false;
-  trimChckBox.value = false;
-  moveChckBox.value = true;
-  theWindow.preferredSize = 'width: -1, height: -1';
-  theWindow.alignChildren = ['left', 'top'];
-  theWindow.margins = [10, 10, 10, 10];
-  orderDropDown.selection = 0;
-  firstSlider.size = {
-    width: 170,
-    height: 10
-  };
-  lastSlider.size = {
-    width: 170,
-    height: 10
-  };
-
-  firstSlider.onChanging = function () {
-    //update the edit box,
-    firstHmsfText.text = percentToHMSF(firstSlider.value, theComp);
-
-    //and the other sliders
-    lastSlider.value = Math.max(firstSlider.value, lastSlider.value);
-
-    //propogate to the edittext box
-    lastHmsfText.text = percentToHMSF(lastSlider.value, theComp);
-  };
-
-  firstHmsfText.onChange = function () {
-    //parse the user input
-    try {
-      var parsedTime = currentFormatToTime(firstHmsfText.text, theComp.frameRate);
-    } catch (e) {
-      alert(e.name, e.message);
-      parsedTime = 0;
+    //need orders and functions as an array for the dropdowns
+    var orderList = [];
+    for (i in orders) {
+        orderList.push(orders[i]);
     }
-    //propogate it to the slider
-    firstSlider.value = parsedTime / theComp.duration * 100;
+    // var doTheStuff = mainGroup.add('button', undefined, 'Sequence layers');
+    var orderPanel = mainGroup.add('panel{text: "Sequence order"}');
+    var orderDropDown = orderPanel.add('dropDownList', [
+        undefined, undefined, 140, undefined
+    ], orderList);
 
-    //update the other slider if there are conflicts
-    lastSlider.value = Math.max(firstSlider.value, lastSlider.value);
+    var trimMovePanel = mainGroup.add('panel{orientation:"row", text: "method"}')
+    var trimOrMove = trimMovePanel.add("group{orientation:'row'}");
+    var moveChckBox = trimOrMove.add('radiobutton', [undefined, undefined, 75, 16], 'move');
+    var trimChckBox = trimOrMove.add('radiobutton', [undefined, undefined, 75, 16], 'trim');
+    // var slideChckBox = trimOrMove.add('radiobutton', [undefined, undefined, 76, 16], 'slide');
 
-    //normalise the value back to the editbox
-    firstHmsfText.text = timeToCurrentFormat(parsedTime, theComp.frameRate, true);
-  };
+    var inoutPanel = mainGroup.add('panel{orientation:"column", alignChildren: "left", text: "alignment"}', undefined);
+    var inOrOut = inoutPanel.add("group{orientation:'row'}", );
+    var inChckBox = inOrOut.add('radiobutton', [undefined, undefined, 75, 16], 'inPoints');
+    var outChckBox = inOrOut.add('radiobutton', [undefined, undefined, 161, 16], 'outPoints');
 
-  lastSlider.onChanging = function () {
-    //update the edit box,
-    try{
-      lastHmsfText.text = percentToHMSF(lastSlider.value, theComp);
+    var firstPanel = mainGroup.add('panel', undefined, 'first');
+    var firstInOutCurrentGrp = firstPanel.add("group{orientation:'row'}");
+    var firstInOrOutDD = firstInOutCurrentGrp.add('dropDownList', [
+        undefined, undefined, 140, undefined
+    ], inAndOut);
+    var firstBttn = firstInOutCurrentGrp.add('button', undefined, 'set to current');
+    var firstGrp = firstPanel.add("group{orientation:'row'}");
+    var firstSlider = firstGrp.add('slider', undefined, 0, 0, 100);
+    var firstHmsfText = firstGrp.add('editText', [
+        undefined, undefined, 66, 28
+    ], percentToHMSF(0, theComp) || "00:00:00:00");
 
-      //and the other sliders
-      firstSlider.value = Math.min(firstSlider.value, lastSlider.value);
+    var lastPanel = mainGroup.add('panel', undefined, 'last');
+    var lastInOutCurrentGrp = lastPanel.add("group{orientation:'row'}");
+    var lastInOrOutDD = lastInOutCurrentGrp.add('dropDownList', [
+        undefined, undefined, 140, undefined
+    ], inAndOut);
+    var lastBttn = lastInOutCurrentGrp.add('button', undefined, 'set to current');
+    var lastGrp = lastPanel.add("group{orientation:'row'}");
+    var lastSlider = lastGrp.add('slider', undefined, 100, 0, 100);
+    var lastHmsfText = lastGrp.add('editText', [
+        undefined, undefined, 66, 28
+    ], percentToHMSF(100, theComp) || "00:00:10:00");
 
-      //propogate to the edittext box
-      firstHmsfText.text = percentToHMSF(firstSlider.value, theComp);
-    } catch (e){
-      writeln(e);
-      firstHmsfText.text = timeToCurrentFormat(0,25)
-      lastHmsfText.text =timeToCurrentFormat(60,25);
-      firstSlider.value = 0;
-      lastSlider.value = 60;
+    var functionList = [];
+    for (var i in fns) {
+        functionList.push(fns[i]);
     }
-  };
+    var easingPanel = mainGroup.add("panel{ alignChildren: 'left', text: 'easing'}", undefined, 'easing');
+    var easingRow = easingPanel.add("group{orientation:'column', alignChildren: 'left'}");
+    var fnTypeDropDown = easingRow.add('dropDownList', [
+        undefined, undefined, 140, undefined
+    ], functionList);
+    var pwrGrp = easingPanel.add("group{orientation:'row'}");
+    var pwrSlider = pwrGrp.add('slider', undefined, 0.5, 0, 1);
+    var pwrEdit = pwrGrp.add('editText', [undefined, undefined, 66, 28], '' + pwrSlider.value);
 
-  // lastHmsfText.addEventListener('focus', function() {     var currText =
-  // lastHmsfText.text;     lastHmsfText.text = '';     lastHmsfText.textselection
-  // = currText; }); //this didn't work
+    var regularityPanel = mainGroup.add('panel', undefined, 'regularity');
+    var regularityGrp = regularityPanel.add("group{orientation:'row'}");
+    var regularitySlider = regularityGrp.add('slider', undefined, 100, -200, 100);
 
-  lastHmsfText.onChange = function () {
-    //parse the user input
-    try {
-      var parsedTime = currentFormatToTime(lastHmsfText.text, theComp.frameRate);
-      //propogate it to the slider
-      lastSlider.value = parsedTime / theComp.duration * 100;
 
-      //update the other slider if there are conflicts
-      firstSlider.value = Math.min(firstSlider.value, lastSlider.value);
 
-      //normalise the value back to the editbox
-      lastHmsfText.text = timeToCurrentFormat(parsedTime, theComp.frameRate);
-    } catch (e){
-      writeln(e);
-      firstHmsfText.text = timeToCurrentFormat(0,25);
-      lastHmsfText.text = timeToCurrentFormat(60,25);
-      firstSlider.value = 0;
-      lastSlider.value = 60;
+    firstInOrOutDD.selection = IN;
+    lastInOrOutDD.selection = OUT;
+    fnTypeDropDown.selection = 1;
+    pwrSlider.size = {
+        width: 170,
+        height: 10
+    };
+    regularitySlider.size = firstSlider.size = lastSlider.size = {
+        width: 170,
+        height: 10
+    };
+
+    inChckBox.value = true;
+    moveChckBox.value = true;
+    theWindow.preferredSize = 'width: -1, height: -1';
+    theWindow.alignChildren = ['left', 'top'];
+    theWindow.margins = [10, 10, 10, 10];
+    orderDropDown.selection = 0;
+
+
+    firstSlider.onChanging = function() {
+        //update the edit box,
+        firstHmsfText.text = percentToHMSF(firstSlider.value, theComp);
+
+        // //and the other sliders
+        // lastSlider.value = Math.max(firstSlider.value, lastSlider.value);
+
+        // //propogate to the edittext box
+        // lastHmsfText.text = percentToHMSF(lastSlider.value, theComp);
+    };
+
+
+
+    lastSlider.onChanging = function() {
+        //update the edit box,
+        try {
+            lastHmsfText.text = percentToHMSF(lastSlider.value, theComp);
+
+            // //and the other sliders
+            // firstSlider.value = Math.min(firstSlider.value, lastSlider.value);
+
+            // //propogate to the edittext box
+            // firstHmsfText.text = percentToHMSF(firstSlider.value, theComp);
+        } catch (e) {
+            writeln(e);
+            firstHmsfText.text = timeToCurrentFormat(0, 25)
+            lastHmsfText.text = timeToCurrentFormat(60, 25);
+            firstSlider.value = 0;
+            lastSlider.value = 60;
+        }
     }
-  };
+    lastSlider.onChange =
+        regularitySlider.onChange =
+        firstSlider.onChange =
+        moveChckBox.onChange =
+        orderDropDown.onChange =
+        firstInOrOutDD.onChange =
+        lastInOrOutDD.onChange =
+        function() {
+            doTheThings();
+        }
 
-  pwrSlider.onChange = function () {
-    pwrEdit.text = '' + pwrSlider.value;
-  };
+    firstHmsfText.onChange = function() {
+        //parse the user input
+        try {
+            var parsedTime = currentFormatToTime(firstHmsfText.text, theComp.frameRate);
+            //propogate it to the slider
+            firstSlider.value = parsedTime / theComp.duration * 100;
 
-  pwrEdit.onChange = function () {
-    pwrSlider.value = parseInt(pwrEdit.text, 10);
-  };
+            //update the other slider if there are conflicts
+            lastSlider.value = Math.max(firstSlider.value, lastSlider.value);
 
-  firstBttn.onClick = function () {
-    theComp = app.project.activeItem;
-    if (!theComp) {
-      alert('no comp is active');
+            //normalise the value back to the editbox
+            firstHmsfText.text = timeToCurrentFormat(parsedTime, theComp.frameRate, true);
+            doTheThings();
+        } catch (e) {
+            writeln(e);
+            firstHmsfText.text = timeToCurrentFormat(0, 25);
+            firstSlider.value = 0;
+        }
+    };
+
+    lastHmsfText.onChange = function() {
+        //parse the user input
+        try {
+            var parsedTime = currentFormatToTime(lastHmsfText.text, theComp.frameRate);
+            //propogate it to the slider
+            lastSlider.value = parsedTime / theComp.duration * 100;
+
+            //update the other slider if there are conflicts
+            firstSlider.value = Math.min(firstSlider.value, lastSlider.value);
+
+            //normalise the value back to the editbox
+            lastHmsfText.text = timeToCurrentFormat(parsedTime, theComp.frameRate);
+            doTheThings();
+        } catch (e) {
+            writeln(e);
+            lastHmsfText.text = timeToCurrentFormat(theComp.duration, 25);
+            lastSlider.value = theComp.duration;
+        }
+    };
+    //convert slider position into useful values for the functions
+
+
+    firstBttn.onClick = function() {
+        theComp = app.project.activeItem;
+        if (!theComp) {
+            alert('no comp is active');
+        } else {
+            //propogate it to the slider
+            firstSlider.value = theComp.time / theComp.duration * 100;
+
+            //update the other slider if there are conflicts
+            lastSlider.value = Math.max(firstSlider.value, lastSlider.value);
+
+            //propogate the value to the editbox
+            firstHmsfText.text = percentToHMSF(firstSlider.value);
+            doTheThings();
+        }
+    };
+
+    lastBttn.onClick = function() {
+        theComp = app.project.activeItem;
+        if (!theComp) {
+            alert('no comp is active');
+        } else {
+            //propogate it to the slider
+            lastSlider.value = theComp.time / theComp.duration * 100;
+
+            //update the other slider if there are conflicts
+            firstSlider.value = Math.min(firstSlider.value, lastSlider.value);
+
+            //propogate the value to the editbox
+            lastHmsfText.text = percentToHMSF(lastSlider.value);
+            doTheThings();
+        }
+    };
+
+    //These functions map linear slider values to more useful values for the functions
+    const sliderPower = 0.5;
+
+    function mapSliderToVal(n) {
+        return (n > 0.999) ? //deal with 1 / 0 issues
+            1000 :
+            Math.max(0, Math.pow(1 / (1 - n) - 1, sliderPower));
+    }
+
+    function mapEditToVal(n) {
+        return 1 - 1 / (Math.pow(n, 1 / sliderPower) + 1);
+    }
+
+    fnTypeDropDown.onChange = function() {
+        if (fnTypeDropDown.selection.index === 0) {
+            pwrSlider.value = 0.5;
+            pwrEdit.value = '1';
+        }
+        doTheThings();
+    };
+
+    pwrEdit.onChange = function() {
+        if (fnTypeDropDown.selection.index === 0) {
+            fnTypeDropDown.selection = 1;
+        }
+        pwrSlider.value = mapEditToVal(parseFloat(pwrEdit.text, 10));
+        doTheThings();
+    };
+
+    pwrSlider.onChange = function() {
+
+        if (fnTypeDropDown.selection.index === 0) {
+            fnTypeDropDown.selection = 1;
+        }
+        pwrEdit.text = '' + Math.round(mapSliderToVal(pwrSlider.value) * 1000) / 1000;
+        doTheThings();
+    };
+
+
+
+    trimChckBox.onClick =
+        moveChckBox.onClick =
+        function() {
+            firstInOrOutDD.visible =
+                lastInOrOutDD.visible =
+                moveChckBox.value;
+            // doTheThings();
+        }
+
+    inChckBox.onClick =
+        outChckBox.onClick = function() {
+            if (!trimChckBox.value) {
+                doTheThings();
+            }
+        };
+
+
+    function doTheThings() {
+        theComp = app.project.activeItem;
+        if (theComp) {
+            app.beginUndoGroup('sequence layers plus');
+            var order = orderDropDown.selection.text;
+            var firstTime = theComp.duration * firstSlider.value / 100;
+            var lastTime = theComp.duration * lastSlider.value / 100;
+            var ease = fnTypeDropDown.selection.text;
+            var easePower = mapSliderToVal(pwrSlider.value);
+            var regularity = regularitySlider.value / 100;
+            var doInPoints = inChckBox.value;
+            var moveNotTrim = moveChckBox.value;
+            var firstInOrOut = firstInOrOutDD.selection.index;
+            var lastInOrOut = lastInOrOutDD.selection.index;
+            sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity, doInPoints, theComp, moveNotTrim, firstInOrOut, lastInOrOut); //, randozCheckbox.value);
+            app.endUndoGroup();
+        }
+    }
+
+    if (theWindow instanceof Window) {
+        theWindow.center();
+        theWindow.show();
     } else {
-      //propogate it to the slider
-      firstSlider.value = theComp.time / theComp.duration * 100;
-
-      //update the other slider if there are conflicts
-      lastSlider.value = Math.max(firstSlider.value, lastSlider.value);
-
-      //propogate the value to the editbox
-      firstHmsfText.text = percentToHMSF(firstSlider.value);
+        theWindow
+            .layout
+            .layout(true);
     }
-  };
-
-  lastBttn.onClick = function () {
-    theComp = app.project.activeItem;
-    if (!theComp) {
-      alert('no comp is active');
-    } else {
-      //propogate it to the slider
-      lastSlider.value = theComp.time / theComp.duration * 100;
-
-      //update the other slider if there are conflicts
-      firstSlider.value = Math.min(firstSlider.value, lastSlider.value);
-
-      //propogate the value to the editbox
-      lastHmsfText.text = percentToHMSF(lastSlider.value);
-    }
-  };
-
-  fnTypeDropDown.onChange = function () {
-    var i;
-    var fn = 0;
-    var fnsel = fnTypeDropDown.selection.text;
-    for ( i = 0; i < fnList.length; i++) {
-      if (fnList[i] === fnsel) {
-        fn = i;
-      }
-    }
-
-    pwrSlider.enabled = (fn !== 0); //disable for linear
-    pwrEdit.enabled = (fn !== 0);
-  };
-
-  inChckBox.onClick = function () {
-    outChckBox.value = !inChckBox.value;
-  };
-
-  outChckBox.onClick = function () {
-    inChckBox.value = !outChckBox.value;
-  };
-
-  trimChckBox.onClick = function () {
-    moveChckBox.value = !trimChckBox.value;
-  };
-
-  moveChckBox.onClick = function () {
-    trimChckBox.value = !moveChckBox.value;
-  };
-
-  doTheStuff.onClick = function () {
-    theComp = app.project.activeItem;
-    if (!theComp) {
-      alert('no comp is active');
-    } else {
-      app.beginUndoGroup('sequence layers plus');
-      var order = orderDropDown.selection.text;
-      var firstStartTime = theComp.duration * firstSlider.value / 100;
-      var endTime = theComp.duration * lastSlider.value / 100;
-      var ease = fnTypeDropDown.selection.text;
-      var easePower = Math.pow(pwrSlider.value / 8, 4) * 8;
-      var regularity = regularitySlider.value / 100;
-      var doInPoints = inChckBox.value;
-      var moveNotTrim = moveChckBox.value;
-      sequenceLayers(order, firstStartTime, endTime, ease, easePower, regularity, doInPoints, theComp, moveNotTrim); //, randozCheckbox.value);
-      app.endUndoGroup();
-    }
-  };
-
-  if (theWindow instanceof Window) {
-    theWindow.center();
-    theWindow.show();
-  } else {
-    theWindow
-    .layout
-    .layout(true);
-  }
 }
 
 buildGUI(this);
