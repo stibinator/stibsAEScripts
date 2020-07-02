@@ -1,7 +1,10 @@
 ﻿// In-n-out by stib ©2016 Stephen Dixon sequences layers in a variety of ways
 /* @target aftereffects */
-/* include ../(lib)/jsextras.jsx */
+// @includepath "../(lib)/"
+// @include jsextras.jsx 
 /* global app, Panel, CompItem, timeToCurrentFormat, currentFormatToTime, writeln */
+
+var scriptName = "stopNGo";
 
 var fns = {
     linear: 'linear',
@@ -16,6 +19,42 @@ var orders = {
     current: 'current order',
     alphabetical: 'alphabetical',
 };
+
+function myPrefs(prefList) {
+
+    this.parsePref = function(val, prefType) {
+        switch (prefType) {
+            case "integer":
+                return parseInt(val, 10);
+            case "float":
+                return parseFloat(val);
+            case "bool":
+                return (val === "true")
+            default:
+                return val
+        }
+    }
+
+    this.getPref = function(preference) {
+        if (app.settings.haveSetting(scriptName, preference.name)) {
+            this.prefs[preference.name] = this.parsePref(app.settings.getSetting(scriptName, preference.name), preference.prefType);
+        } else {
+            this.prefs[preference.name] = preference.factoryDefault;
+        }
+    }
+
+    this.writePrefs = function(preference) {
+        if (this.prefs[preference.name] !== preference.value) {
+            app.settings.saveSetting(scriptName, preference.name, preference.value)
+        }
+        this.prefs[preference.name] = preference.value;
+    }
+
+    this.prefs = {};
+    for (var p in prefList) {
+        this.getPref(prefList[p]);
+    }
+}
 
 var IN = 0;
 var OUT = 1;
@@ -191,9 +230,9 @@ function sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity,
                         theLayer.outPoint = currentOutPoint;
                     } else {
                         var currentInPoint = theLayer.inPoint;
-                        theLayer.outPoint = Math.max(Math.round(myTime / fDur) * fDur, currentInPoint + fDur );
-                    //    alert(theLayer.outPoint);
-                    //    theLayer.inPoint = currentInPoint;
+                        theLayer.outPoint = Math.max(Math.round(myTime / fDur) * fDur, currentInPoint + fDur);
+                        //    alert(theLayer.outPoint);
+                        //    theLayer.inPoint = currentInPoint;
                     }
                 }
             }
@@ -201,16 +240,9 @@ function sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity,
     }
 }
 
-// function makeFamilies(theLayers){
-//   var i;
-//   var families = [];
-//   for ( i = 0; i < theLayers.length; i++) {
-//     if (contains(theLayers, theLayers[i].parent)){
-//
-//     }
-//   }
-// }
-
+//------------------------------------------------------------------------------------------------
+//---                                           GUI                                           ----
+//------------------------------------------------------------------------------------------------
 
 function buildGUI(thisObj) {
     var theComp = (app.project.activeItem || {
@@ -294,11 +326,6 @@ function buildGUI(thisObj) {
     var regularityGrp = regularityPanel.add("group{orientation:'row'}");
     var regularitySlider = regularityGrp.add('slider', undefined, 100, -200, 100);
 
-
-
-    firstInOrOutDD.selection = IN;
-    lastInOrOutDD.selection = OUT;
-    fnTypeDropDown.selection = 1;
     pwrSlider.size = {
         width: 170,
         height: 10
@@ -307,94 +334,131 @@ function buildGUI(thisObj) {
         width: 170,
         height: 10
     };
-
-    inChckBox.value = true;
-    moveChckBox.value = true;
     theWindow.preferredSize = 'width: -1, height: -1';
     theWindow.alignChildren = ['left', 'top'];
     theWindow.margins = [10, 10, 10, 10];
-    orderDropDown.selection = 0;
 
 
-    firstSlider.onChanging = function() {
-        //update the edit box,
-        firstHmsfText.text = percentToHMSF(firstSlider.value, theComp);
+    var prefs = new myPrefs(
+        [{
+                name: "firstInOrOutDDselection",
+                factoryDefault: IN,
+                prefType: "integer"
+            },
+            {
+                name: "lastInOrOutDDselection",
+                factoryDefault: OUT,
+                prefType: "integer"
+            },
+            {
+                name: "inChckBoxvalue",
+                factoryDefault: true,
+                prefType: "bool"
+            },
+            {
+                name: "moveChckBoxvalue",
+                factoryDefault: true,
+                prefType: "bool"
+            },
+            {
+                name: "pwrSlidervalue",
+                factoryDefault: 0.5,
+                prefType: "float"
+            },
+            {
+                name: "fnTypeDropDownselection",
+                factoryDefault: 1,
+                prefType: "integer"
+            },
+            {
+                name: "orderDropDownselection",
+                factoryDefault: 0,
+                prefType: "integer"
+            }
+        ]
+    );
+    firstInOrOutDD.name = "firstInOrOutDDselection";
+    lastInOrOutDD.name = "lastInOrOutDDselection";
+    fnTypeDropDown.name = "fnTypeDropDownselection";
+    inChckBox.name = "inChckBoxvalue";
+    moveChckBox.name = "moveChckBoxvalue";
+    orderDropDown.name = "orderDropDownselection";
+    pwrSlider.name = "pwrSlidervalue";
 
-        // //and the other sliders
-        // lastSlider.value = Math.max(firstSlider.value, lastSlider.value);
+    inChckBox.value = prefs.prefs[inChckBox.name];
+    moveChckBox.value = prefs.prefs[moveChckBox.name];
+    pwrSlider.value = prefs.prefs[pwrSlider.name];
 
-        // //propogate to the edittext box
-        // lastHmsfText.text = percentToHMSF(lastSlider.value, theComp);
-    };
+    firstInOrOutDD.selection = prefs.prefs[firstInOrOutDD.name];
+    lastInOrOutDD.selection = prefs.prefs[lastInOrOutDD.name];
+    fnTypeDropDown.selection = prefs.prefs[fnTypeDropDown.name];
+    orderDropDown.selection = prefs.prefs[orderDropDown.name];
 
-
-
-    lastSlider.onChanging = function() {
-        //update the edit box,
-        try {
-            lastHmsfText.text = percentToHMSF(lastSlider.value, theComp);
-
-            // //and the other sliders
-            // firstSlider.value = Math.min(firstSlider.value, lastSlider.value);
-
-            // //propogate to the edittext box
-            // firstHmsfText.text = percentToHMSF(firstSlider.value, theComp);
-        } catch (e) {
-            writeln(e);
-            firstHmsfText.text = timeToCurrentFormat(0, 25)
-            lastHmsfText.text = timeToCurrentFormat(60, 25);
-            firstSlider.value = 0;
-            lastSlider.value = 60;
-        }
+    firstSlider.value = 0;
+    lastSlider.value = 100;
+    firstSlider.textBox = firstHmsfText;
+    lastSlider.textBox = lastHmsfText;
+    firstHmsfText.slider = firstSlider;
+    lastHmsfText.slider = lastSlider;
+    firstSlider.onChanging = lastSlider.onChanging = function() {
+        //update the edit box
+            this.textBox.text = percentToHMSF(lastSlider.value, theComp);
     }
+
     lastSlider.onChange =
-        regularitySlider.onChange =
         firstSlider.onChange =
-        moveChckBox.onChange =
-        orderDropDown.onChange =
-        firstInOrOutDD.onChange =
-        lastInOrOutDD.onChange =
         function() {
             doTheThings();
         }
 
-    firstHmsfText.onChange = function() {
-        //parse the user input
-        try {
-            var parsedTime = currentFormatToTime(firstHmsfText.text, theComp.frameRate);
-            //propogate it to the slider
-            firstSlider.value = parsedTime / theComp.duration * 100;
-
-            //update the other slider if there are conflicts
-            lastSlider.value = Math.max(firstSlider.value, lastSlider.value);
-
-            //normalise the value back to the editbox
-            firstHmsfText.text = timeToCurrentFormat(parsedTime, theComp.frameRate, true);
+    regularitySlider.onChange =
+        moveChckBox.onChange =
+        function() {
+            prefs.writePrefs({
+                name: this.name,
+                value: this.value
+            })
             doTheThings();
-        } catch (e) {
-            writeln(e);
-            firstHmsfText.text = timeToCurrentFormat(0, 25);
-            firstSlider.value = 0;
         }
+
+    orderDropDown.onChange =
+        firstInOrOutDD.onChange =
+        lastInOrOutDD.onChange =
+        function() {
+            prefs.writePrefs({
+                name: this.name,
+                value: this.selection.index
+            })
+            alert(prefs.prefs[this.name]);
+            doTheThings();
+        }
+
+    fnTypeDropDown.onChange = function() {
+        if (fnTypeDropDown.selection.index === 0) {
+            pwrSlider.value = 0.5;
+            pwrEdit.value = '1';
+        }
+        prefs.writePrefs({
+            name: this.name,
+            value: this.selection.index
+        })
+        doTheThings();
     };
 
-    lastHmsfText.onChange = function() {
+    firstHmsfText.onChange = lastHmsfText.onChange = function() {
         //parse the user input
         try {
-            var parsedTime = currentFormatToTime(lastHmsfText.text, theComp.frameRate);
+            var parsedTime = currentFormatToTime(this.text, theComp.frameRate);
             //propogate it to the slider
-            lastSlider.value = parsedTime / theComp.duration * 100;
-
-            //update the other slider if there are conflicts
-            firstSlider.value = Math.min(firstSlider.value, lastSlider.value);
+            this.slider.value = parsedTime / theComp.duration * 100;
 
             //normalise the value back to the editbox
-            lastHmsfText.text = timeToCurrentFormat(parsedTime, theComp.frameRate);
+            this.text = timeToCurrentFormat(parsedTime, theComp.frameRate);
             doTheThings();
         } catch (e) {
             writeln(e);
-            lastHmsfText.text = timeToCurrentFormat(theComp.duration, 25);
-            lastSlider.value = theComp.duration;
+            this.text = timeToCurrentFormat(theComp.duration, 25);
+            this.slider.value = theComp.duration;
         }
     };
     //convert slider position into useful values for the functions
@@ -403,7 +467,7 @@ function buildGUI(thisObj) {
     firstBttn.onClick = function() {
         theComp = app.project.activeItem;
         if (!theComp) {
-            alert('no comp is active');
+            firstHmsfText.text = "No Comp!"
         } else {
             //propogate it to the slider
             firstSlider.value = theComp.time / theComp.duration * 100;
@@ -420,7 +484,8 @@ function buildGUI(thisObj) {
     lastBttn.onClick = function() {
         theComp = app.project.activeItem;
         if (!theComp) {
-            alert('no comp is active');
+            // alert('no comp is active');
+            lastHmsfText.text = "No Comp!"
         } else {
             //propogate it to the slider
             lastSlider.value = theComp.time / theComp.duration * 100;
@@ -447,13 +512,6 @@ function buildGUI(thisObj) {
         return 1 - 1 / (Math.pow(n, 1 / sliderPower) + 1);
     }
 
-    fnTypeDropDown.onChange = function() {
-        if (fnTypeDropDown.selection.index === 0) {
-            pwrSlider.value = 0.5;
-            pwrEdit.value = '1';
-        }
-        doTheThings();
-    };
 
     pwrEdit.onChange = function() {
         if (fnTypeDropDown.selection.index === 0) {
@@ -519,5 +577,7 @@ function buildGUI(thisObj) {
             .layout(true);
     }
 }
+
+// var prefs = new PrefsFile("in-n-out");
 
 buildGUI(this);
