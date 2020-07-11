@@ -1,10 +1,13 @@
-﻿// In-n-out by stib ©2016 Stephen Dixon sequences layers in a variety of ways
+﻿/* eslint-disable no-redeclare */
+// In-n-out by stib ©2016 Stephen Dixon sequences layers in a variety of ways
 /* @target aftereffects */
 // @includepath "../(lib)/"
-// @include jsextras.jsx 
-/* global app, Panel, CompItem, timeToCurrentFormat, currentFormatToTime, writeln */
+// @include jsextras.jsx
+// @include copyproperties-makekey.jsx 
+/* global app, Panel, CompItem, timeToCurrentFormat, currentFormatToTime, writeln, getKeyAttributes,
+makeKeyWithAttributes */
 
-var scriptName = "stopNGo";
+var scriptName = "pureandAppliedInNOut";
 
 var fns = {
     linear: 'linear',
@@ -115,10 +118,70 @@ function percentToHMSF(percent, acomp) {
     return false;
 }
 
+function findFirstKey(theLayer) {
+    var selectedProps = theLayer.selectedProperties;
+    var keyTime = "unset";
+    if (selectedProps) {
+        for (var p in selectedProps) {
+            var selectedKeys = selectedProps[p].selectedKeys;
+            if (selectedKeys) {
+                var kt = selectedProps[p].keyTime(selectedKeys[0]);
+                if (keyTime === "unset" || kt < keyTime) {
+                    keyTime = kt;
+                }
+            }
+        }
+    }
+    return keyTime;
+}
+
+function findLastKey(theLayer) {
+    var selectedProps = theLayer.selectedProperties;
+    var keyTime = "unset";
+    if (selectedProps) {
+        for (var p in selectedProps) {
+            var selectedKeys = selectedProps[p].selectedKeys;
+            if (selectedKeys) {
+                var kt = selectedProps[p].keyTime(selectedKeys[selectedKeys.length - 1]);
+                if (keyTime === "unset" || kt > keyTime) {
+                    keyTime = kt;
+                }
+            }
+        }
+    }
+    return keyTime;
+}
+
+function moveKeys(theProperty, theKeys, theOffset) {
+    var currentKeys = [];
+    var theNewKeys = [];
+    theKeys.sort(function(a, b) {
+        return (b - a)
+    })
+    for (var k in theKeys) {
+        currentKeys.push(getKeyAttributes(theProperty, theKeys[k]));
+        theProperty.removeKey(theKeys[k]);
+    }
+    for (k in currentKeys) {
+        theNewKeys.push (makeKeyWithAttributes(theProperty, currentKeys[k], currentKeys[k].keyTime + theOffset));
+    }
+    return theNewKeys; //indices fo the newly created keys
+}
+
 //here comes the hoo-ha
-function sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity, doInPoints, theComp, moveNotTrim, firstInOrOut, lastInOrOut) { //}, randoz) {
+function sequenceLayers(
+    order,
+    firstTime,
+    lastTime,
+    ease,
+    easePower,
+    regularity,
+    doInPoints,
+    theComp,
+    method,
+    firstInOrOut,
+    lastInOrOut) {
     var shouldDoInPoints = doInPoints;
-    var i;
     if (!theComp) {
         alert('choose some layers in a comp');
     } else {
@@ -165,21 +228,52 @@ function sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity,
             }
             var numLayers = theLayers.length;
             var n = numLayers - 1; //just for readability
+            var keysToMove = [];
+            var currentFirstKey = [];
 
-            if (moveNotTrim) {
+
+            if (method === 0) {
+                var layerLength = theLayers[0].outPoint - theLayers[0].inPoint;
                 if (firstInOrOut === OUT & doInPoints) {
-                    firstTime -= theLayers[0].outPoint - theLayers[0].inPoint;
+                    firstTime -= layerLength;
                 } else if (firstInOrOut === IN & !doInPoints) {
-                    firstTime += theLayers[0].outPoint - theLayers[0].inPoint;
+                    firstTime += layerLength;
+                }
+                layerLength = theLayers[n].outPoint - theLayers[n].inPoint;
+                if (lastInOrOut === OUT & doInPoints) {
+                    lastTime -= layerLength;
+                } else if (lastInOrOut === IN & !doInPoints) {
+                    lastTime += layerLength;
+                }
+            } else if (method === 2) {
+                var keyDif = findLastKey(theLayers[0]) - findFirstKey(theLayers[0]);
+                if (firstInOrOut === OUT & doInPoints) {
+                    firstTime -= keyDif;
+                } else if (firstInOrOut === IN & !doInPoints) {
+                    firstTime += keyDif;
                 }
 
+                keyDif = findLastKey(theLayers[n]) - findFirstKey(theLayers[n]);
                 if (lastInOrOut === OUT & doInPoints) {
-                    lastTime -= theLayers[n].outPoint - theLayers[n].inPoint;
+                    lastTime -= keyDif;
                 } else if (lastInOrOut === IN & !doInPoints) {
-                    lastTime += theLayers[n].outPoint - theLayers[n].inPoint;
+                    lastTime += keyDif;
+                }
+                for (var i = 0; i < numLayers; i++) {
+                    var theLayer = theLayers[i];
+                    var layerProps = [];
+                    var selectedProps = theLayer.selectedProperties;
+                    currentFirstKey[i] = findFirstKey(theLayer);
+                    for (var p in selectedProps) {
+                        var selectedKeys = selectedProps[p].selectedKeys;
+                        layerProps.push({
+                            prop: selectedProps[p],
+                            keys: selectedKeys
+                        })
+                    }
+                    keysToMove[i] = layerProps;
                 }
             }
-
 
             var fDur = theComp.frameDuration;
             var timeSpan = lastTime - firstTime;
@@ -187,7 +281,8 @@ function sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity,
             var outOffset; //the offset between the layer's start time and its in-point, and its active duration
             var myTime = 0;
             var layerIndex = 0;
-            for (i = 0; i < numLayers; i++) {
+            var newKeys = [];
+            for (var i = 0; i < numLayers; i++) {
                 layerIndex = i;
                 if (regularity < 1 && i > 0 && i < (numLayers - 1)) { //always make the first and last keyframe on time
                     //although we're using the layer index as the input it doesn't have to be an integer. This adds some irregularity
@@ -215,25 +310,41 @@ function sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity,
                 }
 
                 var theLayer = theLayers[i];
-                if (moveNotTrim) { //move the layer
-                    if (shouldDoInPoints) {
-                        startOffset = theLayer.inPoint - theLayer.startTime;
-                        theLayer.startTime = Math.round(myTime / fDur) * fDur - startOffset; //round it to the nearest frame boundary
-                    } else {
-                        outOffset = theLayer.outPoint - theLayer.startTime;
-                        theLayer.startTime = Math.round(myTime / fDur) * fDur - outOffset; //round it to the nearest frame boundary
-                    }
-                } else { //trim the in or out point
-                    if (doInPoints) {
-                        var currentOutPoint = theLayer.outPoint;
-                        theLayer.inPoint = Math.min(Math.round(myTime / fDur) * fDur, currentOutPoint - fDur);
-                        theLayer.outPoint = currentOutPoint;
-                    } else {
-                        var currentInPoint = theLayer.inPoint;
-                        theLayer.outPoint = Math.max(Math.round(myTime / fDur) * fDur, currentInPoint + fDur);
-                        //    alert(theLayer.outPoint);
-                        //    theLayer.inPoint = currentInPoint;
-                    }
+                switch (method) {
+                    case 0:
+                        //move the layer
+                        if (shouldDoInPoints) {
+                            startOffset = theLayer.inPoint - theLayer.startTime;
+                            theLayer.startTime = Math.round(myTime / fDur) * fDur - startOffset; //round it to the nearest frame boundary
+                        } else {
+                            outOffset = theLayer.outPoint - theLayer.startTime;
+                            theLayer.startTime = Math.round(myTime / fDur) * fDur - outOffset; //round it to the nearest frame boundary
+                        }
+                        break;
+                    case 1: //trim the in or out point
+                        if (doInPoints) {
+                            var currentOutPoint = theLayer.outPoint;
+                            theLayer.inPoint = Math.min(Math.round(myTime / fDur) * fDur, currentOutPoint - fDur);
+                            theLayer.outPoint = currentOutPoint;
+                        } else {
+                            var currentInPoint = theLayer.inPoint;
+                            theLayer.outPoint = Math.max(Math.round(myTime / fDur) * fDur, currentInPoint + fDur);
+                        }
+                        break;
+                    case 2: //move keys
+                        
+                        var keyOffset = myTime - currentFirstKey[i];
+                        for (var p in keysToMove[i]) {
+                            if (keysToMove[i][p]) {
+                                newKeys[i] = moveKeys(keysToMove[i][p].prop, keysToMove[i][p].keys, keyOffset);
+                            }
+                        }
+                        break;
+                }
+            }
+            for (var i in newKeys){
+                for (var k in newKeys[i]){
+                    //make new keys
                 }
             }
         }
@@ -270,20 +381,29 @@ function buildGUI(thisObj) {
     }
     // var doTheStuff = mainGroup.add('button', undefined, 'Sequence layers');
     var orderPanel = mainGroup.add('panel{text: "Sequence order"}');
-    var orderDropDown = orderPanel.add('dropDownList', [
+    var orderGroup = orderPanel.add('group{orientation: "row"}');
+    var orderDropDown = orderGroup.add('dropDownList', [
         undefined, undefined, 140, undefined
     ], orderList);
-
+    orderGroup.add('staticText', [undefined, undefined, 96, 16]);
     var trimMovePanel = mainGroup.add('panel{orientation:"row", text: "method"}')
     var trimOrMove = trimMovePanel.add("group{orientation:'row'}");
+
     var moveChckBox = trimOrMove.add('radiobutton', [undefined, undefined, 75, 16], 'move');
     var trimChckBox = trimOrMove.add('radiobutton', [undefined, undefined, 75, 16], 'trim');
+    var keysChckBox = trimOrMove.add('radiobutton', [undefined, undefined, 75, 16], 'keys');
+    var methodCheckBoxes = [moveChckBox, trimChckBox, keysChckBox];
+    var method = {
+        name: "method",
+        value: 0,
+        choices: methodCheckBoxes
+    };
     // var slideChckBox = trimOrMove.add('radiobutton', [undefined, undefined, 76, 16], 'slide');
 
     var inoutPanel = mainGroup.add('panel{orientation:"column", alignChildren: "left", text: "alignment"}', undefined);
     var inOrOut = inoutPanel.add("group{orientation:'row'}", );
-    var inChckBox = inOrOut.add('radiobutton', [undefined, undefined, 75, 16], 'inPoints');
-    var outChckBox = inOrOut.add('radiobutton', [undefined, undefined, 161, 16], 'outPoints');
+    var inChckBox = inOrOut.add('radiobutton', [undefined, undefined, 75, 16], 'in points');
+    var outChckBox = inOrOut.add('radiobutton', [undefined, undefined, 161, 16], 'out points');
 
     var firstPanel = mainGroup.add('panel', undefined, 'first');
     var firstInOutCurrentGrp = firstPanel.add("group{orientation:'row'}");
@@ -325,7 +445,7 @@ function buildGUI(thisObj) {
     var regularityPanel = mainGroup.add('panel', undefined, 'regularity');
     var regularityGrp = regularityPanel.add("group{orientation:'row'}");
     var regularitySlider = regularityGrp.add('slider', undefined, 100, -200, 100);
-
+    regularityGrp.add('staticText', [undefined, undefined, 66, 28]);
     pwrSlider.size = {
         width: 170,
         height: 10
@@ -356,9 +476,9 @@ function buildGUI(thisObj) {
                 prefType: "bool"
             },
             {
-                name: "moveChckBoxvalue",
-                factoryDefault: true,
-                prefType: "bool"
+                name: "method",
+                factoryDefault: 0,
+                prefType: "integer"
             },
             {
                 name: "pwrSlidervalue",
@@ -381,13 +501,15 @@ function buildGUI(thisObj) {
     lastInOrOutDD.name = "lastInOrOutDDselection";
     fnTypeDropDown.name = "fnTypeDropDownselection";
     inChckBox.name = "inChckBoxvalue";
-    moveChckBox.name = "moveChckBoxvalue";
+
     orderDropDown.name = "orderDropDownselection";
     pwrSlider.name = "pwrSlidervalue";
 
     inChckBox.value = prefs.prefs[inChckBox.name];
-    moveChckBox.value = prefs.prefs[moveChckBox.name];
     pwrSlider.value = prefs.prefs[pwrSlider.name];
+
+    method.value = prefs.prefs[method.name];
+    methodCheckBoxes[method.value].value = true;
 
     firstInOrOutDD.selection = prefs.prefs[firstInOrOutDD.name];
     lastInOrOutDD.selection = prefs.prefs[lastInOrOutDD.name];
@@ -402,7 +524,7 @@ function buildGUI(thisObj) {
     lastHmsfText.slider = lastSlider;
     firstSlider.onChanging = lastSlider.onChanging = function() {
         //update the edit box
-            this.textBox.text = percentToHMSF(lastSlider.value, theComp);
+        this.textBox.text = percentToHMSF(lastSlider.value, theComp);
     }
 
     lastSlider.onChange =
@@ -429,7 +551,6 @@ function buildGUI(thisObj) {
                 name: this.name,
                 value: this.selection.index
             })
-            alert(prefs.prefs[this.name]);
             doTheThings();
         }
 
@@ -534,11 +655,23 @@ function buildGUI(thisObj) {
 
     trimChckBox.onClick =
         moveChckBox.onClick =
+        keysChckBox.onClick =
         function() {
             firstInOrOutDD.visible =
                 lastInOrOutDD.visible =
-                moveChckBox.value;
-            // doTheThings();
+                (!trimChckBox.value);
+            if (keysChckBox.value) {
+                inChckBox.text = "first key";
+                outChckBox.text = "last key";
+            } else {
+                inChckBox.text = "in points";
+                outChckBox.text = "out points";
+            }
+            method.value = 1 * trimChckBox.value + 2 * keysChckBox.value; //0 if move, 1 if trim, 2 if keys
+            prefs.writePrefs({
+                name: method.name,
+                value: method.value
+            })
         }
 
     inChckBox.onClick =
@@ -552,18 +685,20 @@ function buildGUI(thisObj) {
     function doTheThings() {
         theComp = app.project.activeItem;
         if (theComp) {
-            app.beginUndoGroup('sequence layers plus');
-            var order = orderDropDown.selection.text;
-            var firstTime = theComp.duration * firstSlider.value / 100;
-            var lastTime = theComp.duration * lastSlider.value / 100;
-            var ease = fnTypeDropDown.selection.text;
-            var easePower = mapSliderToVal(pwrSlider.value);
-            var regularity = regularitySlider.value / 100;
-            var doInPoints = inChckBox.value;
-            var moveNotTrim = moveChckBox.value;
-            var firstInOrOut = firstInOrOutDD.selection.index;
-            var lastInOrOut = lastInOrOutDD.selection.index;
-            sequenceLayers(order, firstTime, lastTime, ease, easePower, regularity, doInPoints, theComp, moveNotTrim, firstInOrOut, lastInOrOut); //, randozCheckbox.value);
+            app.beginUndoGroup('in-n-out sequence layers');
+            sequenceLayers(
+                orderDropDown.selection.text, //order
+                theComp.duration * firstSlider.value / 100, //firstTime
+                theComp.duration * lastSlider.value / 100, //lastTime
+                fnTypeDropDown.selection.text, //ease
+                mapSliderToVal(pwrSlider.value), //easePower
+                regularitySlider.value / 100, //regularity
+                inChckBox.value, //doInPoints
+                theComp, //theComp
+                method.value, //method
+                firstInOrOutDD.selection.index, //firstInOrOut
+                lastInOrOutDD.selection.index //lastInOrOut
+            );
             app.endUndoGroup();
         }
     }
@@ -579,5 +714,4 @@ function buildGUI(thisObj) {
 }
 
 // var prefs = new PrefsFile("in-n-out");
-
 buildGUI(this);
