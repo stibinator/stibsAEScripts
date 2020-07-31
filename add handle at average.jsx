@@ -20,17 +20,19 @@ function addCompHandle() {
         app.beginUndoGroup(scriptName);
         var comp = app.project.activeItem;
         if (comp) {
+            var i;
             //make a separate array containing all the layers
             //to avoid weirdness when we add a null
             var theLayers = comp.selectedLayers;
             if (theLayers.length > 0) {
             //use selected layers if some layers are selected,
-                for (var i = 0; i < theLayers.length; i++) {
+                for (i = 0; i < theLayers.length; i++) {
                     existingLayers.push(theLayers[i]);
+                    averagePosition += theLayers[i].transform.position.value;
                 }
             } else {
                 // use all if not
-                for (var i = 1; i <= comp.layers.length; i++) {
+                for (i = 1; i <= comp.layers.length; i++) {
                     existingLayers.push(comp.layers[i]);
                     averagePosition += comp.layers[i].transform.position.value;
                 }
@@ -42,7 +44,7 @@ function addCompHandle() {
             theHandle.name = "comp handle";
             theHandle.transform.position.setValue(averagePosition);
             //loop through and parent the layers to the handle
-            for (var i = 0; i < existingLayers.length; i++) {
+            for (i = 0; i < existingLayers.length; i++) {
                 if ( existingLayers[i].locked ){
                     if (doLockedLayers){
                         existingLayers[i].locked = false;
