@@ -2,11 +2,11 @@
 /* includepath "../(lib)" */
 /* include "defaultFor.jsx" */
 /* include "getproperties.jsx" */
-// @script "copySelectedKeys"
-/* global app, defaultFor, copyKeyAttributes,getIndividualProperties */
+// @script "getSelectedKeys"
+/* global app, defaultFor, getKeyAttributes,getIndividualProperties */
 
 // eslint-disable-next-line no-unused-vars
-function copySelectedKeys(thecomp) {
+function getSelectedKeys(thecomp) {
     //the object this function will return: an array of keys and the first key's time
     var theKeys = {
         keys: [],
@@ -23,7 +23,7 @@ function copySelectedKeys(thecomp) {
             var selectedKeyframes = selectedProps[j].selectedKeys;
             for (var k = 0; k < selectedKeyframes.length; k++) {
                 //get the attributes of the selected key - note that the key list is 1-indexed WTF adobe?
-                var theAttributes = copyKeyAttributes(selectedProps[j], selectedKeyframes[k]);
+                var theAttributes = getKeyAttributes(selectedProps[j], selectedKeyframes[k]);
                 if (theKeys.firstSelectedKeyTime === null || theAttributes.keyTime < theKeys.firstSelectedKeyTime) {
                     theKeys.firstSelectedKeyTime = theAttributes.keyTime;
                 }

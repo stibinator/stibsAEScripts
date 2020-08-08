@@ -1,6 +1,6 @@
-﻿/* global KeyframeInterpolationType, PropertyValueType, writeLn */
+﻿/* global KeyframeInterpolationType, PropertyValueType, writeln */
 // eslint-disable-next-line no-unused-vars
-function copyKeyAttributes(theProperty, keyIndex) {
+function getKeyAttributes(theProperty, keyIndex) {
 	//in lieu of a proper keyframe object this returns all the details of a keyframe, given a property and key index.
 	var theAttributes = {
 	} ;
@@ -31,7 +31,7 @@ function copyKeyAttributes(theProperty, keyIndex) {
 
 // eslint-disable-next-line no-unused-vars
 function makeKeyWithAttributes(theProperty, keyAttributes, keyTime) {
-	//turns theAttributes from copyKeyAttributes into a new keyframe
+	//turns theAttributes from getKeyAttributes into a new keyframe
 	if (theProperty.canVaryOverTime){
 		try {
 			theProperty.setValueAtTime(keyTime, keyAttributes.keyVal);
@@ -49,7 +49,7 @@ function makeKeyWithAttributes(theProperty, keyAttributes, keyTime) {
 			}
 			return newKeyIndex;
 		} catch (e) {
-				writeLn(e);
+				writeln(e);
 				return false;
 		}
 	} else {

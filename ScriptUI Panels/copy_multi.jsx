@@ -8,7 +8,7 @@
 // @include "getproperties.jsx"
 // @include "copyproperties-makekey.jsx"
 // @script "copyMultiLayer"
-/* global app, Panel, ScriptUI, CompItem, makeKeyWithAttributes, makeKeyAtTime, setKeyAttributesReversed, copyKeyAttributes, defaultFor, getIndividualProperties */
+/* global app, Panel, ScriptUI, CompItem, makeKeyWithAttributes, makeKeyAtTime, setKeyAttributesReversed, getKeyAttributes, defaultFor, getIndividualProperties */
 
 var thisScript = this;
 thisScript.scriptTitle = "copyMultiLayer";
@@ -91,7 +91,7 @@ thisScript.buildGUI = function(thisObj) {
     //     var theComp = app.project.activeItem;
     //     if (theComp instanceof CompItem) {
     //         app.beginUndoGroup("copy keys");
-    //         thisObj.theCopiedKeys = thisObj.copySelectedKeys(theComp);
+    //         thisObj.theCopiedKeys = thisObj.getSelectedKeys(theComp);
     //         thisObj.prefs.saveToPrefs(thisObj.theCopiedKeys);
     //         app.endUndoGroup();
     //         pasteBttn.enabled = true;
@@ -119,7 +119,7 @@ thisScript.buildGUI = function(thisObj) {
         var theComp = app.project.activeItem;
         if (theComp instanceof CompItem) {
             app.beginUndoGroup("copy and paste Keys"); 
-            thisObj.theCopiedKeys = thisObj.copySelectedKeys(theComp);
+            thisObj.theCopiedKeys = thisObj.getSelectedKeys(theComp);
             // thisObj.prefs.saveToPrefs(thisObj.theCopiedKeys);
             thisObj.pasteKeys(thisObj.theCopiedKeys, beforeAfterToggle.value, theComp);
             app.endUndoGroup();
@@ -148,7 +148,7 @@ thisScript.buildGUI = function(thisObj) {
         var theComp = app.project.activeItem;
         if (theComp instanceof CompItem) {
             app.beginUndoGroup("copy and paste Keys"); 
-            thisObj.theCopiedKeys = thisObj.copySelectedKeys(theComp);
+            thisObj.theCopiedKeys = thisObj.getSelectedKeys(theComp);
             // thisObj.prefs.saveToPrefs(thisObj.theCopiedKeys);
             thisObj.pasteKeysReverse(thisObj.theCopiedKeys, beforeAfterToggle.value, theComp);
             app.endUndoGroup();
@@ -227,7 +227,7 @@ thisScript.pasteKeysReverse = function(theCopiedKeys, beforePlayHead, theComp) {
     }
 };
 
-thisScript.copySelectedKeys = function(theComp) {
+thisScript.getSelectedKeys = function(theComp) {
     //the object this function will return: an array of keys and the first key's time
     var theKeys = {
         keys: [],
@@ -244,7 +244,7 @@ thisScript.copySelectedKeys = function(theComp) {
             if (selectedKeyframes) {
                 for (var k = 0; k < selectedKeyframes.length; k++) {
                     //get the attributes of the selected key - note that the key list is 1-indexed WTF adobe?
-                    var theAttributes = copyKeyAttributes(selectedProps[j], selectedKeyframes[k]);
+                    var theAttributes = getKeyAttributes(selectedProps[j], selectedKeyframes[k]);
                     if (theKeys.firstSelectedKeyTime === null || theAttributes.keyTime < theKeys.firstSelectedKeyTime) {
                         theKeys.firstSelectedKeyTime = theAttributes.keyTime;
                     }

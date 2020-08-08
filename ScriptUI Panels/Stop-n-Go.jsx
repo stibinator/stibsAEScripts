@@ -1,5 +1,5 @@
-// includepath "../(lib)"
-// include  "getproperties.jsx"
+// @includepath "../(lib)"
+// @include  "getproperties.jsx"
 
 /* global app, Panel, getPropertiesWithExpressionsFromLayer */
 

@@ -1,20 +1,22 @@
+/* eslint-disable no-redeclare */
 // snaps keyframes to frame boundaries. Useful to avoid problems when you have more than one keyframe per frame
 // if you select some keyframes it will quantise just them,
 //  or if you select a layer it will quantise all the keyframes in the layer
 // or if nothing is selected it will quantise all the keys in the comp.
 
-//  @includepath "./(lib)"
+//  @includepath "./(lib)/"
 //  @include "copyproperties-makekey.jsx"
 //  @include "jsextras.jsx"
 //  @include "getproperties.jsx"
+/* global getKeyAttributes, makeKeyWithAttributes, getPropertiesWithKeyFramesFromLayer, app, CompItem */
 
 function quantiseKeytimes(theProp, theKeyIndexes){
     for (var i = 0; i < theKeyIndexes.length; i++ ){ 
         var newKeyTime = Math.floor(theProp.keyTime(theKeyIndexes[i]) / theComp.frameDuration) * theComp.frameDuration;
-        var oldKeyAttributes = copyKeyAttributes(theProp, theKeyIndexes[i]);
+        var oldKeyAttributes = getKeyAttributes(theProp, theKeyIndexes[i]);
         theProp.removeKey(theKeyIndexes[i]);
         makeKeyWithAttributes(theProp, oldKeyAttributes, newKeyTime);
-    };
+    }
 }
 
 
@@ -35,8 +37,11 @@ if (theComp instanceof CompItem){
             }        
         // nothing selected, do all layers
         } else {
+            // eslint-disable-next-line no-redeclare
             for (var i = 1 ; i <= theComp.numLayers; i++){
+                // eslint-disable-next-line no-redeclare
                 var layerProps = getPropertiesWithKeyFramesFromLayer(theComp.layer(i), false);
+                // eslint-disable-next-line no-redeclare
                 for (var p =0; p < layerProps.length; p++){
                     theProps.push(layerProps[p]);
                 }
