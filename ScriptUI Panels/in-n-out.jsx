@@ -33,7 +33,7 @@ function myPrefs(prefList) {
                 return parseFloat(val);
             case "bool":
                 return (val === "true")
-            default:
+            default: //string
                 return val
         }
     }
