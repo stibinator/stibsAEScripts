@@ -60,9 +60,7 @@ function makeKeyWithAttributes(theProperty, keyAttributes, keyTime) {
 //make key but don't set attributes
 // eslint-disable-next-line no-unused-vars
 function makeKeyAtTime(theProperty, keyAttributes, keyTime) {
-  //makes the key, but time-reversed, so that the temporal and spatial interpolation goes out->in rather than in->out
   theProperty.setValueAtTime(keyTime, keyAttributes.keyVal);
-
 }
 
 //set attributes

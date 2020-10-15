@@ -114,12 +114,28 @@ function buildUI(thisObj) {
         var logicDDown = logicGrp.add('dropDownList', undefined, logicList);
         logicDDown.name = "logic";
 
+        // work in progress
+        // var iconButtnGrp = pal.add('group');
+        // iconButtnGrp.orientation = 'column';
+        // var row1 = iconButtnGrp.add('group');
+        // row1.orientation = 'row';
+        // var row2 = iconButtnGrp.add('group');
+        // row2.orientation = 'row';
+        // var row3 = iconButtnGrp.add('group');
+        // row3.orientation = 'row';
+        // var adjustBtn = row1.add("button", undefined, 'adjust');
+        // var footageBtn = row1.add("button", undefined, 'footage');
+        // var imageBtn = row2.add("button", undefined, 'image');
+        // var shapeBtn = row2.add("button", undefined, 'shape');
+        // var solidBtn = row3.add("button", undefined, 'solid');
+        // var textBtn = row3.add("button", undefined, 'text');
+
         //----------fill default values---------------------
         offsetText.text = prefs.prefs[offsetText.name];
         nthText.text = prefs.prefs[nthText.name];
         logicDDown.selection = prefs.prefs[logicDDown.name];
         layerMode.value = prefs.prefs[layerMode.name];
-        keyMode.value = ! ( prefs.prefs[layerMode.name]);
+        keyMode.value = !(prefs.prefs[layerMode.name]);
         randomChckBx.value = prefs.prefs[randomChckBx.name];
 
         //-------- callbacks ----------------------------- 
@@ -131,7 +147,7 @@ function buildUI(thisObj) {
             }
 
         keyMode.onClick = function() {
-            prefs.setPref(layerMode.name, (! (keyMode.value)));
+            prefs.setPref(layerMode.name, (!(keyMode.value)));
         }
 
         logicDDown.onChange = function() {
@@ -160,6 +176,12 @@ function buildUI(thisObj) {
         deselectBttn.onClick = function() {
             doTheThings(false);
         };
+        // adjustBtn.onclick = selectLayerType("adjust");
+        // footageBtn.onclick = selectLayerType("footage");
+        // imageBtn.onclick = selectLayerType("image");
+        // shapeBtn.onclick = selectLayerType("shape");
+        // solidBtn.onclick = selectLayerType("solid");
+        // textBtn.onclick = selectLayerType("text");
     }
 
     // get ui values and do the stuff. Called by the select/deselect buttons.
@@ -326,6 +348,8 @@ function selectKeys(sense, nth, offset, logic, randoz) {
     }
     app.endUndoGroup();
 }
+
+
 
 function myPrefs(prefList) {
     this.prefs = {};
