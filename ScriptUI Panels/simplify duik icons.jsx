@@ -3,15 +3,12 @@
 
 var scriptName = "Simplify Duik Icons";
 var SHAPE_NAMES = ["Square", "Circle", "Polygon", "Star"];
-var HANDLEPREFIX = "Handle_";
-
+var HANDLESUFFIX = "_Handle";
 //initialise the label colours
 var userLabelColours = readLabelColoursFromPrefs();
 
-function simplifyDuikIcons(
+function setHandleStyle(
     theLayer,
-    deleteIcons,
-    deleteAnchors,
     deleteIK,
     makeNewIcons,
     iconSize,
@@ -24,23 +21,22 @@ function simplifyDuikIcons(
     anchorShape,
     anchorPoints) {
 
-    if (deleteIcons) {
-        var icon = theLayer.property("Contents").property("Icon");
-        if (icon) {
-            icon.remove();
-        }
+    var icon = theLayer.property("Contents").property("Icon");
+    if (icon) {
+        icon.remove();
     }
-    if (deleteAnchors) {
-        var anchor = theLayer.property("Contents").property("Anchor");
-        if (anchor) {
-            anchor.remove();
-        }
+
+    var anchor = theLayer.property("Contents").property("Anchor");
+    if (anchor) {
+        anchor.remove();
     }
+
+    var ik = theLayer.property("Contents").property("IK");
+    if (ik) {
+        ik.remove();
+    }
+
     if (deleteIK) {
-        var ik = theLayer.property("Contents").property("IK");
-        if (ik) {
-            ik.remove();
-        }
         var ikLine = theLayer.property("Contents").property("IK Line");
         if (ikLine) {
             ikLine.remove();
@@ -57,6 +53,114 @@ function simplifyDuikIcons(
     if (makeNewIcons) {
         newShape(theLayer, "Icon", iconSizeArr, boneColour, false, iconOpacity, iconShape, iconPoints);
     }
+}
+
+function getHandlePositionForLayerGroup(handlePos, selectedLyrs, useAverage) {
+    var sum = selectedLyrs[0].position.value;
+    var max = selectedLyrs[0].position.value;
+    var min = selectedLyrs[0].position.value;
+
+    for (var i = 1; i < selectedLyrs.length; i++) {
+        var p = selectedLyrs[i].position.value;
+        for (var m = 0; m < p.length; m++) {
+            sum[m] += p[m];
+            max[m] = Math.max(max[m], p[m]);
+            min[m] = Math.min(min[m], p[m]);
+        }
+    }
+    var dif = max - min;
+    return (useAverage) ? [sum[0] / selectedLyrs.length, sum[1] / selectedLyrs.length, sum[2] / selectedLyrs.length] : [handlePos[0] / 2 * dif[0], handlePos[1] / 2 * dif[1], handlePos[2] / 2 * dif[2]]
+}
+
+function findParent(aLayer, tree) {
+    if (aLayer.parent) {
+        tree.push(aLayer.parent);
+        return (findParent(aLayer.parent, tree));
+    } else {
+        return tree;
+    }
+}
+
+function groupLayers(selectedLyrsArr, handlePos, useAverage) {
+    if (selectedLyrsArr.length > 1) {
+        var newHandle = app.project.activeItem.layers.addShape();
+        newHandle.position.setValue(getHandlePositionForLayerGroup(handlePos, selectedLyrsArr, useAverage));
+        newHandle.parent = findLatestCommonAncestor(selectedLyrsArr);
+        if (newHandle.parent && newHandle.parent.threeDLayer) {
+            newHandle.threeDLayer = true;
+        }
+        for (var lyr = 0; lyr < selectedLyrsArr.length; lyr++) {
+            selectedLyrsArr[lyr].parent = newHandle;
+        }
+        return newHandle;
+    }
+}
+
+function makeNewHandleLayer(theLayer) {
+    var newShape = app.project.activeItem.layers.addShape();
+    newShape.name = theLayer.name + HANDLESUFFIX;
+    //if the layer isn't a shape layer, create one and make it the parent of the layer
+    makeHandleParentOfLayer(newShape, theLayer, true);
+    theLayer.selected = false; //just to be sure
+    newShape.selected = true;
+    theLayer = newShape;
+}
+
+function includes(theArr, theObj, exactMatching) {
+    for (var a = 0; a < theArr.length; a++) {
+        if (exactMatching) {
+            if (theArr[a] === theObj) {
+                return true
+            }
+        } else {
+            if (theArr[a] == theObj) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
+function findLatestCommonAncestor(theLayers) {
+    for (var tl = 0; tl < theLayers.length; tl++) {
+        theLayers[tl].lineage = findParent(theLayers[tl], []);
+    }
+    if (theLayers[0].lineage.length > 0) {
+        var latestCommonAncestor = null;
+        var foundCommonAncestor = false;
+        for (var p = 0; p < theLayers[0].lineage.length && !foundCommonAncestor; p++) {
+            latestCommonAncestor = theLayers[0].lineage[p];
+            tl = 1;
+            var keepLooking = true;
+            while (tl < theLayers.length && keepLooking) {
+                if (includes(theLayers[tl].lineage, latestCommonAncestor, true)) {
+                    tl++;
+                    keepLooking = true;
+                    foundCommonAncestor = true;
+                } else {
+                    keepLooking = false;
+                    foundCommonAncestor = false;
+                }
+            }
+        }
+        if (foundCommonAncestor) {
+            return latestCommonAncestor;
+        }
+    }
+    return null;
+}
+
+function makeHandleParentOfLayer(newHandle, theLayer, adoptTransforms) {
+    newHandle.threeDLayer = theLayer.threeDLayer;
+    if (theLayer.parent) {
+        newHandle.parent = theLayer.parent;
+    }
+    if (adoptTransforms) {
+        newHandle.position.setValue(theLayer.position.value);
+        newHandle.rotation.setValue(theLayer.rotation.value);
+        newHandle.scale.setValue(theLayer.scale.value);
+    }
+    theLayer.parent = newHandle;
 }
 
 function newShape(theLayer, shapeName, shapeSizeArr, fillColour, strokeColour, shapeOpac, shapeType, shapePoints) {
@@ -222,13 +326,12 @@ function myPrefs(prefList) {
 
 function buildUI(thisObj) {
 
-    /*
-    Code for Import https://scriptui.joonas.me — (Triple click to select): 
-    {"activeId":17,"items":{"item-0":{"id":0,"type":"Dialog","parentId":false,"style":{"enabled":true,"varName":null,"windowType":"Dialog","creationProps":{"su1PanelCoordinates":false,"maximizeButton":false,"minimizeButton":false,"independent":false,"closeButton":true,"borderless":false,"resizeable":false},"text":"Dialog","preferredSize":[0,0],"margins":16,"orientation":"column","spacing":10,"alignChildren":["left","top"]}},"item-1":{"id":1,"type":"Panel","parentId":0,"style":{"enabled":true,"varName":"deletBox","creationProps":{"borderStyle":"etched","su1PanelCoordinates":false},"text":"Delete","preferredSize":[220,0],"margins":10,"orientation":"column","spacing":10,"alignChildren":["left","top"],"alignment":null}},"item-2":{"id":2,"type":"Checkbox","parentId":1,"style":{"enabled":true,"varName":"deleteIconsChkBx","text":"Icons","preferredSize":[0,0],"alignment":null,"helpTip":null}},"item-3":{"id":3,"type":"Checkbox","parentId":1,"style":{"enabled":true,"varName":"deleteAnchorsChkBx","text":"Anchors","preferredSize":[0,0],"alignment":null,"helpTip":null}},"item-4":{"id":4,"type":"Checkbox","parentId":1,"style":{"enabled":true,"varName":"deleteIKChkBx","text":"IK","preferredSize":[0,0],"alignment":null,"helpTip":null}},"item-5":{"id":5,"type":"Panel","parentId":0,"style":{"enabled":true,"varName":"CreatBox","creationProps":{"borderStyle":"etched","su1PanelCoordinates":false},"text":"Create","preferredSize":[0,0],"margins":10,"orientation":"column","spacing":10,"alignChildren":["left","top"],"alignment":null}},"item-6":{"id":6,"type":"Checkbox","parentId":5,"style":{"enabled":true,"varName":"createIconsChkBx","text":"Icons","preferredSize":[0,0],"alignment":null,"helpTip":null}},"item-7":{"id":7,"type":"Checkbox","parentId":5,"style":{"enabled":true,"varName":"createAnchorsChkBx","text":"Anchors","preferredSize":[0,0],"alignment":null,"helpTip":null}},"item-11":{"id":11,"type":"Slider","parentId":18,"style":{"enabled":true,"varName":"iconOpacitySlider","preferredSize":[176,0],"alignment":null,"helpTip":"Icon size"}},"item-12":{"id":12,"type":"Panel","parentId":5,"style":{"enabled":true,"varName":null,"creationProps":{"borderStyle":"etched","su1PanelCoordinates":false},"text":"Size","preferredSize":[0,0],"margins":[4,10,4,10],"orientation":"column","spacing":10,"alignChildren":["left","top"],"alignment":null}},"item-13":{"id":13,"type":"Slider","parentId":12,"style":{"enabled":true,"varName":"iconSizeSlider","preferredSize":[176,0],"alignment":null,"helpTip":"Icon size"}},"item-14":{"id":14,"type":"Panel","parentId":5,"style":{"enabled":true,"varName":null,"creationProps":{"borderStyle":"etched","su1PanelCoordinates":false},"text":"Opacity","preferredSize":[0,0],"margins":[4,10,4,10],"orientation":"column","spacing":10,"alignChildren":["left","top"],"alignment":null}},"item-15":{"id":15,"type":"Slider","parentId":14,"style":{"enabled":true,"varName":"iconSizeSlider","preferredSize":[176,0],"alignment":null,"helpTip":"Icon size"}},"item-16":{"id":16,"type":"Divider","parentId":5,"style":{"enabled":true,"varName":null}},"item-17":{"id":17,"type":"DropDownList","parentId":22,"style":{"enabled":true,"varName":"iconshape","text":"DropDownList","listItems":"Square,Circle,Polygon,Star","preferredSize":[60,0],"alignment":null,"selection":2,"helpTip":null}},"item-18":{"id":18,"type":"Panel","parentId":5,"style":{"enabled":true,"varName":null,"creationProps":{"borderStyle":"etched","su1PanelCoordinates":false},"text":"Size","preferredSize":[0,0],"margins":[4,10,4,10],"orientation":"column","spacing":10,"alignChildren":["left","top"],"alignment":null}},"item-20":{"id":20,"type":"Panel","parentId":5,"style":{"enabled":true,"varName":null,"creationProps":{"borderStyle":"etched","su1PanelCoordinates":false},"text":"Opacity","preferredSize":[0,0],"margins":[4,10,4,10],"orientation":"column","spacing":10,"alignChildren":["left","top"],"alignment":null}},"item-21":{"id":21,"type":"Slider","parentId":20,"style":{"enabled":true,"varName":"iconSizeSlider","preferredSize":[176,0],"alignment":null,"helpTip":"Icon size"}},"item-22":{"id":22,"type":"Group","parentId":5,"style":{"enabled":true,"varName":null,"preferredSize":[0,0],"margins":0,"orientation":"row","spacing":10,"alignChildren":["left","center"],"alignment":null}},"item-23":{"id":23,"type":"Slider","parentId":22,"style":{"enabled":true,"varName":"iconPoints","preferredSize":[106,0],"alignment":null,"helpTip":null}},"item-24":{"id":24,"type":"Group","parentId":5,"style":{"enabled":true,"varName":null,"preferredSize":[0,0],"margins":0,"orientation":"row","spacing":10,"alignChildren":["left","center"],"alignment":null}},"item-25":{"id":25,"type":"DropDownList","parentId":24,"style":{"enabled":true,"varName":"anchorShape","text":"DropDownList","listItems":"Square,Circle,Polygon,Star","preferredSize":[60,0],"alignment":null,"selection":2,"helpTip":null}},"item-26":{"id":26,"type":"Slider","parentId":24,"style":{"enabled":true,"varName":"anchorPoints","preferredSize":[106,0],"alignment":null,"helpTip":null}},"item-27":{"id":27,"type":"Button","parentId":0,"style":{"enabled":true,"varName":null,"text":"Simplify selected Duik bones","justify":"center","preferredSize":[220,0],"alignment":null,"helpTip":null}}},"order":[0,27,1,2,3,4,5,6,18,11,20,21,22,17,23,16,7,12,13,14,15,24,25,26],"settings":{"importJSON":true,"indentSize":false,"cepExport":false,"includeCSSJS":true,"showDialog":true,"functionWrapper":false,"afterEffectsDockable":false,"itemReferenceList":"None"}}
+    /* Original dialog came from here:
+    Code for Import https://scriptui.joonas.me 
     */
 
     // DIALOG
-    // ======
+    // ====================================================================================
     if (thisObj instanceof Panel) {
         var pal = thisObj;
     } else {
@@ -250,57 +353,172 @@ function buildUI(thisObj) {
 
         // DELETBOX
         // ========
-        var deletBox = pal.add("panel", undefined, undefined);
-        deletBox.text = "Delete DuIK Icons";
-        deletBox.orientation = "row";
-        deletBox.alignChildren = ["left", "top"];
-        deletBox.spacing = 10;
-        deletBox.margins = 10;
-        deletBox.preferredSize.width = 200;
-        var deleteIconsChkBx = deletBox.add("checkbox", undefined, undefined);
-        deleteIconsChkBx.name = "deleteIconsChkBx";
 
-        deleteIconsChkBx.text = "Icons";
-        deleteIconsChkBx.preferredSize.width = 60;
-
-        var deleteAnchorsChkBx = deletBox.add("checkbox", undefined, undefined);
-        deleteAnchorsChkBx.name = "deleteAnchorsChkBx"
-
-        deleteAnchorsChkBx.text = "Anchors";
-        deleteAnchorsChkBx.preferredSize.width = 60;
-
+        var deletBox = pal.add("panel", undefined, undefined, {
+            name: "deletBox"
+        });
         var deleteIKChkBx = deletBox.add("checkbox", undefined, undefined);
         deleteIKChkBx.name = "deleteIKChkBx"
+        deleteIKChkBx.text = "Delete DuIK IK lines";
+        deleteIKChkBx.preferredSize.width = 200;
+        deletBox.margins = [10, 6, 10, 2];
+        // deleteIKChkBx.margins = 10, 10,;
 
-        deleteIKChkBx.text = "IK";
-        deleteIKChkBx.preferredSize.width = 60;
+
+        // GROUPLAYERS
+        // ===================================================================================
+        var GroupLayers = pal.add("panel", undefined, undefined, {
+            name: "GroupLayers",
+            borderStyle: "black"
+        });
+        GroupLayers.text = "Group";
+        GroupLayers.preferredSize.width = 200;
+        GroupLayers.orientation = "column";
+        GroupLayers.alignChildren = ["left", "top"];
+        GroupLayers.spacing = 4;
+        GroupLayers.margins = 10;
+
+        var groupLayersBtn = GroupLayers.add("button", undefined, undefined);
+        groupLayersBtn.name = "groupChkBx"
+        groupLayersBtn.helpTip = "Create a single handle for multiple layers.";
+        groupLayersBtn.text = "Create 1 handle for all layers";
+        groupLayersBtn.preferredSize.width = 200;
+
+
+        // ==== slider text headers
+        var headerText = GroupLayers.add("group", undefined, {
+            name: "XGrp"
+        });
+        headerText.orientation = "row";
+        headerText.alignChildren = ["left", "center"];
+        headerText.spacing = 10;
+        headerText.margins = 1;
+        headerText.alignment = ["fill", "top"];
+
+        var statictext1 = headerText.add("statictext", undefined, undefined, {
+            name: "statictext1"
+        });
+        statictext1.text = "Handle Position";
+        statictext1.preferredSize.width = 148;
+
+        var statictext2 = headerText.add("statictext", undefined, undefined, {
+            name: "statictext2"
+        });
+        statictext2.text = "Center";
+
+        // SLIDER GROUP==================
+        var sliderGroup = GroupLayers.add("group", undefined);
+        sliderGroup.orientation = "column";
+        sliderGroup.spacing = 0;
+
+        // XGRP1
+        // =====
+        var XGrp = sliderGroup.add("group", undefined, {
+            name: "XGrp1"
+        });
+        XGrp.orientation = "row";
+        XGrp.alignChildren = ["left", "center"];
+        XGrp.spacing = 10;
+        XGrp.margins = 1;
+        XGrp.alignment = ["fill", "top"];
+
+        var statictext3 = XGrp.add("statictext", undefined, undefined, {
+            name: "statictext3"
+        });
+        statictext3.text = "X";
+
+        var xSlider = XGrp.add("slider", undefined, undefined, undefined, undefined);
+        xSlider.name = "xSlider";
+        xSlider.minvalue = 0;
+        xSlider.maxvalue = 1;
+        xSlider.preferredSize.width = 160;
+
+        xSlider.cntrChkBx = XGrp.add("checkbox", undefined, undefined);
+        xSlider.cntrChkBx.name = "xSlider.cntrChkBx";
+
+        // YGRP
+        // ====
+        var YGrp = sliderGroup.add("group", undefined, {
+            name: "YGrp"
+        });
+        YGrp.orientation = "row";
+        YGrp.alignChildren = ["left", "center"];
+        YGrp.spacing = 10;
+        YGrp.margins = 1;
+        YGrp.alignment = ["fill", "top"];
+
+        var statictext4 = YGrp.add("statictext", undefined, undefined, {
+            name: "statictext4"
+        });
+        statictext4.text = "Y";
+
+        var ySlider = YGrp.add("slider", undefined, undefined, undefined, undefined);
+        ySlider.name = "ySlider";
+        ySlider.minvalue = 0;
+        ySlider.maxvalue = 1;
+        ySlider.preferredSize.width = 160;
+
+        ySlider.cntrChkBx = YGrp.add("checkbox", undefined, undefined);
+        ySlider.cntrChkBx.name = "ySlider.cntrChkBx";
+
+        // ZGRP
+        // ====
+        var ZGrp = sliderGroup.add("group", undefined, {
+            name: "ZGrp"
+        });
+        ZGrp.orientation = "row";
+        ZGrp.alignChildren = ["left", "center"];
+        ZGrp.spacing = 10;
+        ZGrp.margins = 1;
+        ZGrp.alignment = ["fill", "top"];
+
+        var statictext5 = ZGrp.add("statictext", undefined, undefined, {
+            name: "statictext5"
+        });
+        statictext5.text = "Z";
+
+        var zSlider = ZGrp.add("slider", undefined, undefined, undefined, undefined);
+        zSlider.name = "zSlider";
+        zSlider.minvalue = 0;
+        zSlider.maxvalue = 1;
+        zSlider.preferredSize.width = 160;
+
+        zSlider.cntrChkBx = ZGrp.add("checkbox", undefined, undefined);
+        zSlider.cntrChkBx.name = "zSlider.cntrChkBx";
+
+        // average checkbox
+        var averageChkBx = GroupLayers.add("checkbox", undefined, undefined)
+        averageChkBx.name = "Average";
+        averageChkBx.helpTip = "Put the handle at the average position (not always the middle)";
+        averageChkBx.text = "Average";
+        averageChkBx.alignment = ["left", "top"];
+
+
 
         // CREATBOX
-        // ========
-        var CreatBox = pal.add("panel", undefined, undefined, {
-            name: "CreatBox"
+        // ================================================================================================
+        var creatBox = pal.add("panel", undefined, undefined, {
+            name: "creatBox"
         });
-        CreatBox.text = "Create";
-        CreatBox.orientation = "column";
-        CreatBox.alignChildren = ["left", "top"];
-        CreatBox.spacing = 10;
-        CreatBox.margins = 10;
-
-        var createIconsChkBx = CreatBox.add("checkbox", undefined, undefined);
+        creatBox.text = "Create";
+        creatBox.orientation = "column";
+        creatBox.alignChildren = ["left", "top"];
+        creatBox.spacing = 6;
+        creatBox.margins = [10, 16, 10, 6];
+        var createIconsChkBx = creatBox.add("checkbox", undefined, undefined);
         createIconsChkBx.name = "createIconsChkBx"
-
         createIconsChkBx.text = "Icons";
 
-        // PANEL2
+        // Icon size
         // ======
-        var icnSizePanel = CreatBox.add("panel", undefined, undefined, {
+        var icnSizePanel = creatBox.add("panel", undefined, undefined, {
             name: "icnSizePanel"
         });
         icnSizePanel.text = "Icon size";
         icnSizePanel.orientation = "row";
         icnSizePanel.alignChildren = ["left", "top"];
         icnSizePanel.spacing = 10;
-        icnSizePanel.margins = [10, 4, 10, 4];
+        icnSizePanel.margins = [10, 8, 10, 6];
 
         var iconSizeSlider = icnSizePanel.add("slider", undefined, undefined, undefined, undefined);
         iconSizeSlider.name = "iconSizeSlider"
@@ -310,16 +528,16 @@ function buildUI(thisObj) {
         iconSizeSlider.preferredSize.width = 146;
         var iconSizeText = icnSizePanel.add("statictext", undefined, iconSizeSlider.value);
         iconSizeText.preferredSize.width = 20;
-        // PANEL1
+        // icon opacity
         // ======
-        var iconOpacityPanel = CreatBox.add("panel", undefined, undefined, {
+        var iconOpacityPanel = creatBox.add("panel", undefined, undefined, {
             name: "iconOpacityPanel"
         });
         iconOpacityPanel.text = "Icon Opacity";
         iconOpacityPanel.orientation = "column";
         iconOpacityPanel.alignChildren = ["left", "top"];
         iconOpacityPanel.spacing = 10;
-        iconOpacityPanel.margins = [10, 4, 10, 4];
+        iconOpacityPanel.margins = [10, 8, 10, 6];
 
         var iconOpacitySlider = iconOpacityPanel.add("slider", undefined, undefined, undefined, undefined);
         iconOpacitySlider.name = "iconOpacitySlider"
@@ -329,9 +547,9 @@ function buildUI(thisObj) {
         iconOpacitySlider.preferredSize.width = 176;
 
 
-        // GROUP1
+        // icon shape
         // ======
-        var icnShapeGrp = CreatBox.add("group", undefined, {
+        var icnShapeGrp = creatBox.add("group", undefined, {
             name: "icnShapeGrp"
         });
         icnShapeGrp.orientation = "row";
@@ -345,44 +563,43 @@ function buildUI(thisObj) {
         iconShapeDDList.name = "iconShapeDDList"
         iconShapeDDList.preferredSize.width = 90;
 
-        // ----------[-] iconPoints [+] grouplet ----------
-        var iconPointsMinusBtn = icnShapeGrp.add("Button", undefined, undefined, {
-            name: "iconPointsMinusBtn"
+        // ----------[-] iconShapeDDList.txtBx [+] grouplet ----------
+        iconShapeDDList.minus = icnShapeGrp.add("Button", undefined, undefined, {
+            name: "iconShapeDDList.minus"
         });
-        iconPointsMinusBtn.text = "-";
-        iconPointsMinusBtn.preferredSize.width = 20;
-        var iconPoints = icnShapeGrp.add("edittext", undefined, undefined, undefined, undefined);
-        iconPoints.name = "iconPoints";
-        iconPoints.preferredSize.width = 30;
-        iconPoints.update = updateNumberField;
-        var iconPointsPlusBtn = icnShapeGrp.add("Button", undefined, undefined, {
-            name: "iconPointsPlusBtn"
+        iconShapeDDList.minus.text = "-";
+        iconShapeDDList.minus.preferredSize.width = 20;
+        iconShapeDDList.txtBx = icnShapeGrp.add("edittext", undefined, undefined, undefined, undefined);
+        iconShapeDDList.txtBx.name = "iconPoints";
+        iconShapeDDList.txtBx.preferredSize.width = 30;
+        iconShapeDDList.txtBx.update = updateNumberField;
+        iconShapeDDList.plus = icnShapeGrp.add("Button", undefined, undefined, {
+            name: "iconShapeDDList.plus"
         });
-        iconPointsPlusBtn.text = "+";
-        iconPointsPlusBtn.preferredSize.width = 20;
+        iconShapeDDList.plus.text = "+";
+        iconShapeDDList.plus.preferredSize.width = 20;
 
-        // CREATBOX
         // ========
-        var divider1 = CreatBox.add("panel", undefined, undefined, {
+        var divider1 = creatBox.add("panel", undefined, undefined, {
             name: "divider1"
         });
         divider1.alignment = "fill";
-
-        var createAnchorsChkBx = CreatBox.add("checkbox", undefined, undefined);
+        //create anchors
+        var createAnchorsChkBx = creatBox.add("checkbox", undefined, undefined);
         createAnchorsChkBx.name = "createAnchorsChkBx"
 
         createAnchorsChkBx.text = "Anchors";
 
-        // PANEL4
+        // anchor size
         // ======
-        var anchorSizePanel = CreatBox.add("panel", undefined, undefined, {
+        var anchorSizePanel = creatBox.add("panel", undefined, undefined, {
             name: "anchorSizePanel"
         });
         anchorSizePanel.text = "Anchor Size";
         anchorSizePanel.orientation = "row";
         anchorSizePanel.alignChildren = ["left", "top"];
         anchorSizePanel.spacing = 10;
-        anchorSizePanel.margins = [10, 4, 10, 4];
+        anchorSizePanel.margins = [10, 8, 10, 6];
 
         var anchorSizeSlider = anchorSizePanel.add("slider", undefined, undefined, undefined, undefined);
         anchorSizeSlider.name = "anchorSizeSlider"
@@ -395,14 +612,14 @@ function buildUI(thisObj) {
 
         // PANEL3
         // ======
-        var anchorBrightnessPanel = CreatBox.add("panel", undefined, undefined, {
+        var anchorBrightnessPanel = creatBox.add("panel", undefined, undefined, {
             name: "anchorBrightnessPanel"
         });
         anchorBrightnessPanel.text = "Anchor Brightness";
         anchorBrightnessPanel.orientation = "column";
         anchorBrightnessPanel.alignChildren = ["left", "top"];
         anchorBrightnessPanel.spacing = 10;
-        anchorBrightnessPanel.margins = [10, 4, 10, 4];
+        anchorBrightnessPanel.margins = [10, 8, 10, 6];
 
         var anchorBrightnessSlider = anchorBrightnessPanel.add("slider", undefined, undefined, undefined, undefined);
         anchorBrightnessSlider.name = "anchorBrightnessSlider"
@@ -413,7 +630,7 @@ function buildUI(thisObj) {
 
         // GROUP2
         // ======
-        var anchorShapeGroup = CreatBox.add("group", undefined, {
+        var anchorShapeGroup = creatBox.add("group", undefined, {
             name: "anchorShapeGroup"
         });
         anchorShapeGroup.orientation = "row";
@@ -428,21 +645,21 @@ function buildUI(thisObj) {
         anchorShapeDDList.preferredSize.width = 90;
 
         // ----------[-] anchorPoints [ grouplet ----------+]
-        var anchorPointsMinusBtn = anchorShapeGroup.add("Button", undefined, undefined, {
-            name: "anchorPointsMinusBtn"
+        anchorShapeDDList.minus = anchorShapeGroup.add("Button", undefined, undefined, {
+            name: "anchorShapeDDList.minus"
         });
-        anchorPointsMinusBtn.text = "-";
-        anchorPointsMinusBtn.preferredSize.width = 20;
-        var anchorPoints = anchorShapeGroup.add("edittext", undefined, undefined, undefined, undefined);
-        anchorPoints.name = "anchorPoints";
-        anchorPoints.preferredSize.width = 30;
-        anchorPoints.update = updateNumberField;
+        anchorShapeDDList.minus.text = "-";
+        anchorShapeDDList.minus.preferredSize.width = 20;
+        anchorShapeDDList.txtBx = anchorShapeGroup.add("edittext", undefined, undefined, undefined, undefined);
+        anchorShapeDDList.txtBx.name = "anchorShapeDDList.txtBx";
+        anchorShapeDDList.txtBx.preferredSize.width = 30;
+        anchorShapeDDList.txtBx.update = updateNumberField;
 
-        var anchorPointsPlusBtn = anchorShapeGroup.add("Button", undefined, undefined, {
-            name: "anchorPointsPlusBtn"
+        anchorShapeDDList.plus = anchorShapeGroup.add("Button", undefined, undefined, {
+            name: "anchorShapeDDList.plus"
         });
-        anchorPointsPlusBtn.text = "+";
-        anchorPointsPlusBtn.preferredSize.width = 20;
+        anchorShapeDDList.plus.text = "+";
+        anchorShapeDDList.plus.preferredSize.width = 20;
 
         // ------------------------- Preferences ---------------------------------
 
@@ -496,106 +713,152 @@ function buildUI(thisObj) {
                 factoryDefault: 0,
                 prefType: "integer"
             }, {
-                name: "anchorPoints",
+                name: "anchorShapeDDList.txtBx",
                 factoryDefault: 6,
                 prefType: "integer"
+            }, {
+                name: "xSlider",
+                factoryDefault: 0.5,
+                prefType: "float"
+            }, {
+                name: "ySlider",
+                factoryDefault: 0.5,
+                prefType: "float"
+            }, {
+                name: "zSlider",
+                factoryDefault: 0.5,
+                prefType: "float"
             }]
         );
-        deleteIconsChkBx.value = prefs.prefs[deleteIconsChkBx.name];
-        deleteAnchorsChkBx.value = prefs.prefs[deleteAnchorsChkBx.name];
-        deleteIKChkBx.value = prefs.prefs[deleteIKChkBx.name];
-        createIconsChkBx.value = prefs.prefs[createIconsChkBx.name];
-        iconSizeSlider.value = prefs.prefs[iconSizeSlider.name];
-        iconOpacitySlider.value = prefs.prefs[iconOpacitySlider.name];
-        createAnchorsChkBx.value = prefs.prefs[createAnchorsChkBx.name];
-        anchorSizeSlider.value = prefs.prefs[anchorSizeSlider.name];
-        anchorBrightnessSlider.value = prefs.prefs[anchorBrightnessSlider.name];
+
+
+        // initialise stuff
+        var uiValues = [deleteIKChkBx,
+            groupLayersBtn,
+            xSlider,
+            ySlider,
+            zSlider,
+            createIconsChkBx,
+            iconSizeSlider,
+            iconOpacitySlider,
+            createAnchorsChkBx,
+            anchorSizeSlider,
+            anchorBrightnessSlider
+        ]
+        for (var u = 0; u < uiValues.length; u++) {
+            uiValues[u].value = prefs.prefs[uiValues[u].name];
+        }
         iconShapeDDList.selection = prefs.prefs[iconShapeDDList.name];
         anchorShapeDDList.selection = prefs.prefs[anchorShapeDDList.name];
+        iconShapeDDList.txtBx.text = prefs.prefs[iconShapeDDList.txtBx.name];
+        anchorShapeDDList.txtBx.text = prefs.prefs[anchorShapeDDList.txtBx.name];
 
-        iconPoints.text = prefs.prefs[iconPoints.name];
-        anchorPoints.text = prefs.prefs[anchorPoints.name];
-
-        // initialise the text
-        var scaledIconSize = Math.round(500 * (Math.pow(iconSizeSlider.value / 100, 3)));
-        var scaledAnchorSize = Math.round(500 * (Math.pow(anchorSizeSlider.value / 100, 3)));
+        activateControls(anchorShapeDDList);
+        activateControls(iconShapeDDList);
+        var scaledIconSize = scaleUIElements(iconSizeSlider.value);
+        var scaledAnchorSize = scaleUIElements(anchorSizeSlider.value);
         iconSizeText.text = scaledIconSize;
         anchorSizeText.text = scaledAnchorSize;
-        //--------------callbacks -----------------------
 
-        deleteIconsChkBx.onClick =
-            deleteAnchorsChkBx.onClick =
-            deleteIKChkBx.onClick =
+        averageChkBx.onClick = function() {
+            sliderGroup.enabled = !this.value;
+            prefs.setPref(averageChkBx.name, averageChkBx.value);
+        }
+        var handlePos = [xSlider.value, ySlider.value, zSlider.value];
+        var slidrs = [xSlider, ySlider, zSlider];
+        for (var slidr = 0; slidr < slidrs.length; slidr++) {
+            slidrs[slidr].cntrChkBx.value = slidrs[slidr].value === 0.5;
+            slidrs[slidr].onChange = function() {
+                this.cntrChkBx.value = (this.value === 0.5);
+                handlePos = [xSlider.value, ySlider.value, zSlider.value];
+                prefs.setPref(this.name, this.value);
+            }
+        }
+
+        xSlider.cntrChkBx.onClick = function() {
+            xSlider.value = 0.5;
+            prefs.setPref(xSlider.name, xSlider.value);
+        }
+        ySlider.cntrChkBx.onClick = function() {
+            ySlider.value = 0.5;
+            prefs.setPref(ySlider.name, ySlider.value);
+        }
+        zSlider.cntrChkBx.onClick = function() {
+            zSlider.value = 0.5;
+            prefs.setPref(zSlider.name, zSlider.value);
+        }
+
+
+        deleteIKChkBx.onClick =
             createIconsChkBx.onClick =
             createAnchorsChkBx.onClick =
             function() {
                 prefs.setPref(this.name, this.value);
+                adjustIconShape(true);
             }
 
         iconSizeSlider.onChange =
             anchorSizeSlider.onChange =
             function() {
                 prefs.setPref(this.name, this.value);
-                scaledIconSize = Math.round(500 * (Math.pow(iconSizeSlider.value / 100, 3)));
-                scaledAnchorSize = Math.round(500 * (Math.pow(anchorSizeSlider.value / 100, 3)));
+                scaledIconSize = scaleUIElements(iconSizeSlider.value);
+                scaledAnchorSize = scaleUIElements(anchorSizeSlider.value);
                 iconSizeText.text = scaledIconSize;
                 anchorSizeText.text = scaledAnchorSize;
-                doTheThings();
+                adjustIconShape(false);
             }
         iconOpacitySlider.onChange =
             anchorBrightnessSlider.onChange =
             function() {
                 prefs.setPref(this.name, this.value);
-                doTheThings();
+                adjustIconShape(false);
             }
 
         iconShapeDDList.onChange =
             anchorShapeDDList.onChange =
             function() {
-                prefs.setPref(this.name, this.selection.index)
-                doTheThings();
+                prefs.setPref(this.name, this.selection.index);
+                activateControls(this);
+                adjustIconShape(false);
             };
 
-        iconPoints.onChange = function() {
+        iconShapeDDList.txtBx.onChange = function() {
             this.update();
             prefs.setPref(this.name, parseInt(this.text));
-            doTheThings();
+            adjustIconShape(false);
         };
-        anchorPoints.onChange = function() {
+        anchorShapeDDList.txtBx.onChange = function() {
             this.update();
-            prefs.setPref(this.name, parseInt(this.text))
-            doTheThings();
+            prefs.setPref(this.name, parseInt(this.text));
+            adjustIconShape(false);
         };
 
-        iconPointsPlusBtn.onClick = function() {
-            iconPoints.update(1);
-            prefs.setPref(iconPoints.name, parseInt(iconPoints.text));
-            doTheThings();
+        iconShapeDDList.plus.onClick = function() {
+            iconShapeDDList.txtBx.update(1);
+            prefs.setPref(iconShapeDDList.txtBx.name, parseInt(iconShapeDDList.txtBx.text));
+            adjustIconShape(false);
         }
-        iconPointsMinusBtn.onClick = function() {
-            iconPoints.update(-1);
-            prefs.setPref(iconPoints.name, parseInt(iconPoints.text));
-            doTheThings();
+        iconShapeDDList.minus.onClick = function() {
+            iconShapeDDList.txtBx.update(-1);
+            prefs.setPref(iconShapeDDList.txtBx.name, parseInt(iconShapeDDList.txtBx.text));
+            adjustIconShape(false);
         }
 
-        anchorPointsPlusBtn.onClick = function() {
-            anchorPoints.update(1)
-            prefs.setPref(anchorPoints.name, parseInt(anchorPoints.text))
-            doTheThings();
+        anchorShapeDDList.plus.onClick = function() {
+            anchorShapeDDList.txtBx.update(1)
+            prefs.setPref(anchorShapeDDList.txtBx.name, parseInt(anchorShapeDDList.txtBx.text));
+            adjustIconShape(false);
         }
-        anchorPointsMinusBtn.onClick = function() {
-            anchorPoints.update(-1);
-            prefs.setPref(anchorPoints.name, parseInt(anchorPoints.text))
-            doTheThings();
+        anchorShapeDDList.minus.onClick = function() {
+            anchorShapeDDList.txtBx.update(-1);
+            prefs.setPref(anchorShapeDDList.txtBx.name, parseInt(anchorShapeDDList.txtBx.text));
+            adjustIconShape(false);
         }
 
 
         // ------------------------- do the things -------------------------------
         DoTheThingsBtn.onClick = function() {
-            app.beginUndoGroup("simplify Duik Bones");
-            doTheThings()
-
-            app.endUndoGroup();
+            adjustIconShape(true);
         };
 
 
@@ -608,58 +871,99 @@ function buildUI(thisObj) {
 
     }
 
-    function doTheThings() {
-        try {
-            if (app.project && app.project.activeItem) {
-                var selectedBones = app.project.activeItem.selectedLayers;
-                if (selectedBones.length === 0) {
-                    var newShapeLyr = app.project.activeItem.layers.addShape();
-                    newShapeLyr.selected = true;
-                    selectedBones = app.project.activeItem.selectedLayers;
-                    selectedBones[0].name = "Handle";
-                }
+    function activateControls(ddList) {
+        ddList.txtBx.enabled = (ddList.selection.index > 1); // activate the points controls for poly and star
+        ddList.minus.enabled = (ddList.selection.index > 1);
+        ddList.plus.enabled = (ddList.selection.index > 1);
+    }
 
-                var iconPointsInt = parseInt(iconPoints.text);
-                var anchorPointsInt = parseInt(anchorPoints.text);
-
-
-                for (var b = 0; b < selectedBones.length; b++) {
-                    var theLayer = selectedBones[b];
-                    if (!(theLayer instanceof ShapeLayer)) {
-                        var newShape = app.project.activeItem.layers.addShape();
-                        newShape.name = HANDLEPREFIX + theLayer.name;
-                        //if the layer isn't a shape layer, create one and make it the parent of the layer
-                        if (theLayer.parent) {
-                            newShape.parent = theLayer.parent;
-                            newShape.threeDLayer = theLayer.threeDLayer;
-                            newShape.position.setValue(theLayer.position.value);
-                            newShape.rotation.setValue(theLayer.rotation.value);
-                            newShape.scale.setValue(theLayer.scale.value);
-                            theLayer.parent = newShape;
-                            theLayer = newShape;
-                        }
-                    }
-                    simplifyDuikIcons(
-                        theLayer,
-                        deleteIconsChkBx.value,
-                        deleteAnchorsChkBx.value,
-                        deleteIKChkBx.value,
-                        createIconsChkBx.value,
-                        scaledIconSize,
-                        iconOpacitySlider.value,
-                        iconShapeDDList.selection.index,
-                        iconPointsInt,
-                        createAnchorsChkBx.value,
-                        scaledAnchorSize,
-                        anchorBrightnessSlider.value,
-                        anchorShapeDDList.selection.index,
-                        anchorPointsInt
-                    );
-                }
-            }
-        } catch (e) {
-            alert(e);
+    function scaleUIElements(theSize) {
+        if (app.project && app.project.activeItem) {
+            var compBiggestDimension = Math.max(app.project.activeItem.width, app.project.activeItem.height);
+        } else {
+            compBiggestDimension = 1920;
         }
+        //make the biggest possible icon 1/3 of the comp's largest dimension. Smalles size is 6 pixels
+        return Math.max(Math.round(compBiggestDimension / 3 * (Math.pow(theSize / 100, 3))), 6);
+    }
+
+    function getSelectedLayers() {
+        //make a proper array, instead of a stupid layerCollection object
+        var selectedLyrsArr = []; 
+        for (var s = 0; s < app.project.activeItem.selectedLayers.length; s++) {
+            selectedLyrsArr.push(app.project.activeItem.selectedLayers[s]);
+        }
+        return selectedLyrsArr;
+    }
+
+    groupLayersBtn.onClick = function () {
+        var selectedLyrsArr = getSelectedLayers();
+        var groupHandle = groupLayers(selectedLyrsArr, handlePos, averageChkBx.value);
+        var iconPointsInt = parseInt(iconShapeDDList.txtBx.text);
+        var anchorPointsInt = parseInt(anchorShapeDDList.txtBx.text);
+        setHandleStyle(
+            groupHandle,
+            deleteIKChkBx.value,
+            createIconsChkBx.value,
+            scaledIconSize,
+            iconOpacitySlider.value,
+            iconShapeDDList.selection.index,
+            iconPointsInt,
+            createAnchorsChkBx.value,
+            scaledAnchorSize,
+            anchorBrightnessSlider.value,
+            anchorShapeDDList.selection.index,
+            anchorPointsInt
+        );
+
+    }
+    
+
+    function adjustIconShape(createNew) {
+        app.beginUndoGroup("Create Handle");
+        // try {
+        if (app.project && app.project.activeItem) {
+            var iconPointsInt = parseInt(iconShapeDDList.txtBx.text);
+            var anchorPointsInt = parseInt(anchorShapeDDList.txtBx.text);
+
+            var selectedLyrsArr = getSelectedLayers();
+
+            if (selectedLyrsArr.length === 0 && createNew) {
+                var newShapeLyr = app.project.activeItem.layers.addShape();
+                newShapeLyr.name = "Handle";
+                newShapeLyr.selected = true;
+                selectedLyrsArr.push(newShapeLyr);
+            }
+
+
+            for (var b = 0; b < selectedLyrsArr.length; b++) {
+                var theLayer = selectedLyrsArr[b];
+                if (!(theLayer instanceof ShapeLayer)) {
+                    makeNewHandleLayer(theLayer);
+                }
+                //make sure the layer is set to guide layer
+                theLayer.guideLayer = true;
+                setHandleStyle(
+                    theLayer,
+                    deleteIKChkBx.value,
+                    createIconsChkBx.value,
+                    scaledIconSize,
+                    iconOpacitySlider.value,
+                    iconShapeDDList.selection.index,
+                    iconPointsInt,
+                    createAnchorsChkBx.value,
+                    scaledAnchorSize,
+                    anchorBrightnessSlider.value,
+                    anchorShapeDDList.selection.index,
+                    anchorPointsInt
+                );
+            }
+
+        }
+        // } catch (e) {
+        //     alert(e);
+        // }
+        app.endUndoGroup();
     }
 }
 
