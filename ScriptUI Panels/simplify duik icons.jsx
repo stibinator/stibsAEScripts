@@ -73,6 +73,7 @@ function getHandlePositionForLayerGroup(handlePos, selectedLyrs, useAverage) {
 }
 
 function findParent(aLayer, tree) {
+    if (tree == null) {tree = []}
     if (aLayer.parent) {
         tree.push(aLayer.parent);
         return (findParent(aLayer.parent, tree));
